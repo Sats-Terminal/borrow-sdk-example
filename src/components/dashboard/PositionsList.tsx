@@ -57,7 +57,7 @@ export function PositionsList() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {positions.slice(0, 10).map((position) => {
+              {positions.slice(0, 10).map((position: any) => {
                 const fungibleInfo = position.attributes.fungible_info;
                 const symbol = fungibleInfo?.symbol || 'Unknown';
                 const name = fungibleInfo?.name || position.attributes.name;

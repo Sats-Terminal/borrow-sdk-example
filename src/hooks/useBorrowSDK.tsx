@@ -130,6 +130,10 @@ interface BorrowSDKContextType {
   transactions: UserTransaction[];
   repayTransactions: RepayTransaction[];
 
+  // Wallet data
+  walletPortfolio: any;
+  walletPositions: any;
+
   // Workflow
   workflowStatus: WorkflowStatus | null;
   depositInfo: DepositInfo | null;
@@ -147,12 +151,20 @@ interface BorrowSDKContextType {
   getStatus: (workflowId: string) => Promise<any>;
   resumeLoan: (workflowId: string) => Promise<void>;
   loadTransactions: () => Promise<void>;
-  repay: (originalBorrowId: string, repayAmount: string) => Promise<string>;
+  repay: (originalBorrowId: string, repayAmount: string, options?: any) => Promise<string>;
   getRepayStatus: (transactionId: string) => Promise<any>;
   loadRepayTransactions: (loanId?: string) => Promise<void>;
   resumeRepayWorkflow: (transactionId: string) => Promise<void>;
   getLoanCollateralInfo: (loanId: string) => Promise<LoanCollateralInfo | null>;
   sendBitcoin: (toAddress: string, satoshis: number) => Promise<string>;
+  // Wallet methods
+  getWalletPortfolio: () => Promise<void>;
+  getWalletPositions: () => Promise<void>;
+  // Withdraw methods
+  withdrawCollateral: (loanId: string, amount: string, address: string) => Promise<string>;
+  withdrawToEVM: (chain: any, amount: string, destinationAddress: string) => Promise<string>;
+  withdrawToBitcoin: (chain: any, amount: string, assetSymbol: string, btcAddress: string) => Promise<string>;
+  getWithdrawStatus: (transactionId: string) => Promise<any>;
 }
 
 // Create context with default values
@@ -174,6 +186,10 @@ export function BorrowSDKProvider({ children }: { children: ReactNode }) {
   const [quotes, setQuotes] = useState<Quote[]>([]);
   const [transactions, setTransactions] = useState<UserTransaction[]>([]);
   const [repayTransactions, setRepayTransactions] = useState<RepayTransaction[]>([]);
+
+  // Wallet data state
+  const [walletPortfolio, setWalletPortfolio] = useState<any>(null);
+  const [walletPositions, setWalletPositions] = useState<any>(null);
 
   // Workflow state
   const [workflowStatus, setWorkflowStatus] = useState<WorkflowStatus | null>(null);
@@ -487,7 +503,7 @@ export function BorrowSDKProvider({ children }: { children: ReactNode }) {
       console.log('[borrow] Destination (base wallet):', finalDestination);
 
       const workflowId = await sdk.executeBorrow(quote, {
-        destinationAddress: finalDestination
+        destinationAddress: finalDestination || undefined
       });
 
       console.log('[borrow] Loan initiated, workflowId:', workflowId);
@@ -575,10 +591,11 @@ export function BorrowSDKProvider({ children }: { children: ReactNode }) {
     }
   }, [sdk]);
 
-  // Repay (stables only - no collateral option)
+  // Repay (supports options for collateral, partial repay, etc.)
   const repay = useCallback(async (
     originalBorrowId: string,
-    repayAmount: string
+    repayAmount: string,
+    options?: any
   ) => {
     if (!sdk) throw new Error('SDK not initialized');
     setLoading(true);
@@ -605,11 +622,13 @@ export function BorrowSDKProvider({ children }: { children: ReactNode }) {
         repayAmount,
         loanAmount,
         isPartialRepay,
-        sourceWallet: sdk.baseWalletAddress
+        sourceWallet: sdk.baseWalletAddress,
+        options
       });
 
       const transactionId = await sdk.repay(originalBorrowId, repayAmount, {
-        trackWorkflow: false
+        trackWorkflow: false,
+        ...options
       });
       await loadTransactions();
       return transactionId;
@@ -693,6 +712,52 @@ export function BorrowSDKProvider({ children }: { children: ReactNode }) {
     }
   }, [sdk]);
 
+  // Get wallet portfolio
+  const getWalletPortfolio = useCallback(async () => {
+    if (!sdk) return;
+    try {
+      const result = await sdk.getWalletPortfolio();
+      setWalletPortfolio(result.data);
+    } catch (err) {
+      console.error('[getWalletPortfolio] Error:', err);
+    }
+  }, [sdk]);
+
+  // Get wallet positions
+  const getWalletPositions = useCallback(async () => {
+    if (!sdk) return;
+    try {
+      const result = await sdk.getWalletPositions();
+      setWalletPositions(result);
+    } catch (err) {
+      console.error('[getWalletPositions] Error:', err);
+    }
+  }, [sdk]);
+
+  // Withdraw collateral
+  const withdrawCollateral = useCallback(async (loanId: string, amount: string, address: string) => {
+    if (!sdk) throw new Error('SDK not initialized');
+    return sdk.withdrawCollateral(loanId, amount, address);
+  }, [sdk]);
+
+  // Withdraw to EVM (adapt signature to match SDK's object-based params)
+  const withdrawToEVM = useCallback(async (chain: any, amount: string, destinationAddress: string) => {
+    if (!sdk) throw new Error('SDK not initialized');
+    return sdk.withdrawToEVM({ chain, amount, destinationAddress });
+  }, [sdk]);
+
+  // Withdraw to Bitcoin (adapt signature to match SDK's object-based params)
+  const withdrawToBitcoin = useCallback(async (chain: any, amount: string, assetSymbol: string, btcAddress: string) => {
+    if (!sdk) throw new Error('SDK not initialized');
+    return sdk.withdrawToBitcoin({ chain, amount, assetSymbol, btcAddress });
+  }, [sdk]);
+
+  // Get withdraw status
+  const getWithdrawStatus = useCallback(async (transactionId: string) => {
+    if (!sdk) throw new Error('SDK not initialized');
+    return sdk.getWithdrawStatus(transactionId);
+  }, [sdk]);
+
   const value: BorrowSDKContextType = {
     // Connection
     isConnected: !!btcAddress,
@@ -710,6 +775,10 @@ export function BorrowSDKProvider({ children }: { children: ReactNode }) {
     quotes,
     transactions,
     repayTransactions,
+
+    // Wallet data
+    walletPortfolio,
+    walletPositions,
 
     // Workflow
     workflowStatus,
@@ -734,6 +803,14 @@ export function BorrowSDKProvider({ children }: { children: ReactNode }) {
     resumeRepayWorkflow,
     getLoanCollateralInfo,
     sendBitcoin,
+    // Wallet methods
+    getWalletPortfolio,
+    getWalletPositions,
+    // Withdraw methods
+    withdrawCollateral,
+    withdrawToEVM,
+    withdrawToBitcoin,
+    getWithdrawStatus,
   };
 
   return (
