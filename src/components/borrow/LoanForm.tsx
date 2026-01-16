@@ -4,13 +4,23 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { useBorrowSDK } from '@/hooks/useBorrowSDK';
 import { useToast } from '@/hooks/use-toast';
 import { Units } from '@satsterminal-sdk/borrow';
-import { Loader2, Calculator, Bitcoin } from 'lucide-react';
+import { Loader2, Calculator, Bitcoin, Shield } from 'lucide-react';
+
+// Protocol options for filtering quotes
+type ProtocolFilter = 'all' | 'aave' | 'morpho';
 
 export function LoanForm() {
-  const { isConnected, fetchQuotes, loading, error } = useBorrowSDK();
+  const { isConnected, fetchQuotes, loading, error, protocolFilter, setProtocolFilter } = useBorrowSDK();
   const { toast } = useToast();
 
   // Minimum 0.0001 BTC (10,000 sats) - bridge minimum
@@ -123,6 +133,31 @@ export function LoanForm() {
               ≈ ${collateralValue.toLocaleString(undefined, { maximumFractionDigits: 2 })} USD
             </p>
           )}
+        </div>
+
+        {/* Protocol Selector */}
+        <div className="space-y-3">
+          <Label className="text-sm font-medium flex items-center gap-2">
+            <Shield className="h-4 w-4" />
+            Lending Protocol
+          </Label>
+          <Select value={protocolFilter} onValueChange={(v) => setProtocolFilter(v as ProtocolFilter)}>
+            <SelectTrigger className="h-12">
+              <SelectValue placeholder="Select protocol" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Protocols</SelectItem>
+              <SelectItem value="aave">Aave Only</SelectItem>
+              <SelectItem value="morpho">Morpho Only</SelectItem>
+            </SelectContent>
+          </Select>
+          <p className="text-xs text-muted-foreground">
+            {protocolFilter === 'morpho'
+              ? 'Morpho Blue offers competitive rates with isolated markets'
+              : protocolFilter === 'aave'
+              ? 'Aave is a battle-tested DeFi lending protocol'
+              : 'Showing quotes from all available lending protocols'}
+          </p>
         </div>
 
         {/* LTV Slider */}

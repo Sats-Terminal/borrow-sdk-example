@@ -9,9 +9,12 @@ import { Loader2, ArrowRight, Percent, Shield, Zap, Bitcoin, DollarSign, Link } 
 import type { Quote } from '@satsterminal-sdk/borrow';
 
 export function QuoteDisplay() {
-  const { quotes, borrow, loading, baseAddress } = useBorrowSDK();
+  const { filteredQuotes, borrow, loading, baseAddress, protocolFilter } = useBorrowSDK();
   const { toast } = useToast();
   const [selectedQuote, setSelectedQuote] = useState<Quote | null>(null);
+
+  // Use filtered quotes for display
+  const quotes = filteredQuotes;
 
   const handleBorrow = async (quote: Quote) => {
     setSelectedQuote(quote);
@@ -34,6 +37,7 @@ export function QuoteDisplay() {
   };
 
   if (quotes.length === 0) {
+    const protocolName = protocolFilter === 'all' ? 'all protocols' : protocolFilter.toUpperCase();
     return (
       <Card>
         <CardHeader>
@@ -43,7 +47,11 @@ export function QuoteDisplay() {
             </div>
             Loan Quotes
           </CardTitle>
-          <CardDescription>Available quotes will appear here</CardDescription>
+          <CardDescription>
+            {protocolFilter !== 'all'
+              ? `Showing ${protocolFilter.toUpperCase()} quotes only`
+              : 'Available quotes will appear here'}
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="text-center py-12 px-4">
@@ -51,7 +59,7 @@ export function QuoteDisplay() {
               <Zap className="h-8 w-8 text-zinc-300" />
             </div>
             <p className="text-muted-foreground">
-              Enter your loan details and click "Get Loan Quotes" to see available options
+              Enter your loan details and click "Get Loan Quotes" to see available options from {protocolName}
             </p>
           </div>
         </CardContent>
@@ -70,6 +78,7 @@ export function QuoteDisplay() {
         </CardTitle>
         <CardDescription>
           {quotes.length} quote{quotes.length !== 1 ? 's' : ''} found
+          {protocolFilter !== 'all' && ` (${protocolFilter.toUpperCase()} only)`}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">

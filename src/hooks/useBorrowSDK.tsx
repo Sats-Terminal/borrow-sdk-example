@@ -110,6 +110,7 @@ declare global {
 }
 
 export type WalletType = 'unisat' | 'xverse';
+export type ProtocolFilter = 'all' | 'aave' | 'morpho';
 
 // Context type definition
 interface BorrowSDKContextType {
@@ -124,6 +125,11 @@ interface BorrowSDKContextType {
   userStatus: UserStatus | null;
   session: ActiveSession | null;
   baseAddress: string | null;
+
+  // Protocol filter
+  protocolFilter: ProtocolFilter;
+  setProtocolFilter: (filter: ProtocolFilter) => void;
+  filteredQuotes: Quote[];
 
   // Loans
   quotes: Quote[];
@@ -186,6 +192,15 @@ export function BorrowSDKProvider({ children }: { children: ReactNode }) {
   const [quotes, setQuotes] = useState<Quote[]>([]);
   const [transactions, setTransactions] = useState<UserTransaction[]>([]);
   const [repayTransactions, setRepayTransactions] = useState<RepayTransaction[]>([]);
+
+  // Protocol filter state
+  const [protocolFilter, setProtocolFilter] = useState<ProtocolFilter>('all');
+
+  // Filtered quotes based on protocol selection
+  const filteredQuotes = useMemo(() => {
+    if (protocolFilter === 'all') return quotes;
+    return quotes.filter(q => q.protocol.toLowerCase() === protocolFilter);
+  }, [quotes, protocolFilter]);
 
   // Wallet data state
   const [walletPortfolio, setWalletPortfolio] = useState<any>(null);
@@ -770,6 +785,11 @@ export function BorrowSDKProvider({ children }: { children: ReactNode }) {
     userStatus,
     session,
     baseAddress,
+
+    // Protocol filter
+    protocolFilter,
+    setProtocolFilter,
+    filteredQuotes,
 
     // Loans
     quotes,

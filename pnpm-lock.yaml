@@ -39,17 +39,14 @@ importers:
         specifier: ^1.1.5
         version: 1.2.15(@types/react-dom@19.2.3(@types/react@19.2.8))(@types/react@19.2.8)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
       '@satsterminal-sdk/borrow':
-        specifier: 1.6.23
-        version: 1.6.23(typescript@5.9.3)
+        specifier: file:../satsterminal-sdk/packages/borrow
+        version: file:../satsterminal-sdk/packages/borrow(typescript@5.9.3)
       class-variance-authority:
         specifier: ^0.7.0
         version: 0.7.1
       clsx:
         specifier: ^2.1.0
         version: 2.1.1
-      isomorphic-fetch:
-        specifier: ^3.0.0
-        version: 3.0.0
       lucide-react:
         specifier: ^0.400.0
         version: 0.400.0(react@19.2.3)
@@ -96,9 +93,6 @@ importers:
       vite:
         specifier: ^7.2.4
         version: 7.3.1(@types/node@25.0.9)(jiti@1.21.7)
-      vite-plugin-commonjs:
-        specifier: ^0.10.4
-        version: 0.10.4
 
 packages:
 
@@ -947,16 +941,16 @@ packages:
     cpu: [x64]
     os: [win32]
 
-  '@satsterminal-sdk/borrow@1.6.23':
-    resolution: {integrity: sha512-Tf65TwlfEAa+/3egtSQvFVYdFP9prl93V4/E3y1u0Wxr9BNZeB0zhRNB0Lrms14xkRHHQKveXCR8ZT2SaRdC2Q==}
+  '@satsterminal-sdk/borrow@file:../satsterminal-sdk/packages/borrow':
+    resolution: {directory: ../satsterminal-sdk/packages/borrow, type: directory}
     peerDependencies:
       typescript: ^5.0.0
     peerDependenciesMeta:
       typescript:
         optional: true
 
-  '@satsterminal-sdk/core@1.6.22':
-    resolution: {integrity: sha512-1HsHAB4hc6k21tieQ5DrxDeLs2XxuKxR6E4E5tide1a0v0ABKPKT7h/wUhDTCLQAtUD7qUnCpLIkHOMrMyYuqg==}
+  '@satsterminal-sdk/core@file:../satsterminal-sdk/packages/core':
+    resolution: {directory: ../satsterminal-sdk/packages/core, type: directory}
 
   '@scure/base@1.2.6':
     resolution: {integrity: sha512-g/nm5FgUa//MCj1gV09zTJTaM6KBAHqLN907YVQqf7zC49+DcO4B1so4ZX07Ef10Twr6nuqYEH9GEggFXA4Fmg==}
@@ -1009,11 +1003,6 @@ packages:
         optional: true
       zod:
         optional: true
-
-  acorn@8.15.0:
-    resolution: {integrity: sha512-NZyJarBfL7nWwIq+FDL6Zp/yHEhePMNnnJ0y3qfieCrmNvYct8uvtiV41UvlSe6apAfk0fY1FbWx+NwfmpvtTg==}
-    engines: {node: '>=0.4.0'}
-    hasBin: true
 
   any-promise@1.3.0:
     resolution: {integrity: sha512-7UvmKalWRt1wgjL1RrGxoSJW/0QZFIegpeGvZG9kjp8vrRu55XTHbwnqq2GpXm9uLbcuhxm3IqX9OB4MZR1b2A==}
@@ -1144,9 +1133,6 @@ packages:
   es-errors@1.3.0:
     resolution: {integrity: sha512-Zf5H2Kxt2xjTvbJvP2ZWLEICxA6j+hAmMzIlypy4xcBg1vKVnx89Wy0GbS+kf5cwCVFFzdCFh2XSCFNULS6csw==}
     engines: {node: '>= 0.4'}
-
-  es-module-lexer@1.7.0:
-    resolution: {integrity: sha512-jEQoCwk8hyb2AZziIOLhDqpm5+2ww5uIE6lkO/6jcOCusfk6LhMHpXXfBLXTZ7Ydyt0j4VoUQv6uGNYbdW+kBA==}
 
   es-object-atoms@1.1.1:
     resolution: {integrity: sha512-FGgH2h8zKNim9ljj7dankFPcICIK9Cp5bm+c2gQSYePhpaG5+esrLODihIorn+Pe6FGJzWhXQotPv73jTaldXA==}
@@ -1289,9 +1275,6 @@ packages:
     resolution: {integrity: sha512-p3EcsicXjit7SaskXHs1hA91QxgTw46Fv6EFKKGS5DRFLD8yKnohjF3hxoju94b/OcMZoQukzpPpBE9uLVKzgQ==}
     engines: {node: '>= 0.4'}
 
-  isomorphic-fetch@3.0.0:
-    resolution: {integrity: sha512-qvUtwJ3j6qwsF3jLxkZ72qCgjMysPzDfeV240JHiGZsANBYd+EEuu35v7dfrJ9Up0Ak07D7GGSkGhCHTqg/5wA==}
-
   isows@1.0.7:
     resolution: {integrity: sha512-I1fSfDCZL5P0v33sVqeTDSpcstAg/N+wF5HS033mogOVIp4B+oHC7oOCsA3axAbBSGTJ8QubbNmnIRN/h8U7hg==}
     peerDependencies:
@@ -1331,9 +1314,6 @@ packages:
     resolution: {integrity: sha512-rpp7pFHh3Xd93KHixNgB0SqThMHpYNzsGUu69UaQbSZ75Q/J3m5t6EhKyMT3m4w2WOxmJ2mY0tD3vebnXqQryQ==}
     peerDependencies:
       react: ^16.5.1 || ^17.0.0 || ^18.0.0 || ^19.0.0
-
-  magic-string@0.30.21:
-    resolution: {integrity: sha512-vd2F4YUyEXKGcLHoq+TEyCjxueSeHnFxyyjNp80yg0XV4vUhnDer/lvvlqM/arB5bXQN5K2/3oinyCRyx8T2CQ==}
 
   math-intrinsics@1.1.0:
     resolution: {integrity: sha512-/IXtbwEk5HTPyEwyKX6hGkYXxM9nbj64B+ilVJnC/R6B0pH5G4V3b0pVbL7DBj4tkhBAppbQUlf6F6Xl9LHu1g==}
@@ -1648,12 +1628,6 @@ packages:
       typescript:
         optional: true
 
-  vite-plugin-commonjs@0.10.4:
-    resolution: {integrity: sha512-eWQuvQKCcx0QYB5e5xfxBNjQKyrjEWZIR9UOkOV6JAgxVhtbZvCOF+FNC2ZijBJ3U3Px04ZMMyyMyFBVWIJ5+g==}
-
-  vite-plugin-dynamic-import@1.6.0:
-    resolution: {integrity: sha512-TM0sz70wfzTIo9YCxVFwS8OA9lNREsh+0vMHGSkWDTZ7bgd1Yjs5RV8EgB634l/91IsXJReg0xtmuQqP0mf+rg==}
-
   vite@7.3.1:
     resolution: {integrity: sha512-w+N7Hifpc3gRjZ63vYBXA56dvvRlNWRczTdmCBBa+CotUzAPf5b7YMdMR/8CQoeYE5LX3W4wj6RYTgonm1b9DA==}
     engines: {node: ^20.19.0 || >=22.12.0}
@@ -1696,9 +1670,6 @@ packages:
 
   webidl-conversions@3.0.1:
     resolution: {integrity: sha512-2JAn3z8AR6rjK8Sm8orRC0h/bcl/DqL7tRPdGZ4I1CjdF+EaMLmYxBHyXuKL849eucPFhvBoxMsflfOb8kxaeQ==}
-
-  whatwg-fetch@3.6.20:
-    resolution: {integrity: sha512-EqhiFU6daOA8kpjOWTL0olhVOF3i7OrFzSYiGsEMB8GcXS+RrzauAERX65xMeNWVqxA6HXH2m69Z9LaKKdisfg==}
 
   whatwg-url@5.0.0:
     resolution: {integrity: sha512-saE57nupxk6v3HY35+jzBwYa0rKSy0XR8JSxZPwgLr7ys0IBzhGviA1/TUGJLmSVqs8pb9AnvICXEuOHLprYTw==}
@@ -2441,16 +2412,16 @@ snapshots:
   '@rollup/rollup-win32-x64-msvc@4.55.1':
     optional: true
 
-  '@satsterminal-sdk/borrow@1.6.23(typescript@5.9.3)':
+  '@satsterminal-sdk/borrow@file:../satsterminal-sdk/packages/borrow(typescript@5.9.3)':
     dependencies:
-      '@satsterminal-sdk/core': 1.6.22
+      '@satsterminal-sdk/core': file:../satsterminal-sdk/packages/core
       bignumber.js: 9.3.1
     optionalDependencies:
       typescript: 5.9.3
     transitivePeerDependencies:
       - encoding
 
-  '@satsterminal-sdk/core@1.6.22':
+  '@satsterminal-sdk/core@file:../satsterminal-sdk/packages/core':
     dependencies:
       node-fetch: 2.7.0
     transitivePeerDependencies:
@@ -2519,8 +2490,6 @@ snapshots:
   abitype@1.2.3(typescript@5.9.3):
     optionalDependencies:
       typescript: 5.9.3
-
-  acorn@8.15.0: {}
 
   any-promise@1.3.0: {}
 
@@ -2642,8 +2611,6 @@ snapshots:
   es-define-property@1.0.1: {}
 
   es-errors@1.3.0: {}
-
-  es-module-lexer@1.7.0: {}
 
   es-object-atoms@1.1.1:
     dependencies:
@@ -2805,13 +2772,6 @@ snapshots:
     dependencies:
       which-typed-array: 1.1.20
 
-  isomorphic-fetch@3.0.0:
-    dependencies:
-      node-fetch: 2.7.0
-      whatwg-fetch: 3.6.20
-    transitivePeerDependencies:
-      - encoding
-
   isows@1.0.7(ws@8.18.3):
     dependencies:
       ws: 8.18.3
@@ -2841,10 +2801,6 @@ snapshots:
   lucide-react@0.400.0(react@19.2.3):
     dependencies:
       react: 19.2.3
-
-  magic-string@0.30.21:
-    dependencies:
-      '@jridgewell/sourcemap-codec': 1.5.5
 
   math-intrinsics@1.1.0: {}
 
@@ -3178,19 +3134,6 @@ snapshots:
       - utf-8-validate
       - zod
 
-  vite-plugin-commonjs@0.10.4:
-    dependencies:
-      acorn: 8.15.0
-      magic-string: 0.30.21
-      vite-plugin-dynamic-import: 1.6.0
-
-  vite-plugin-dynamic-import@1.6.0:
-    dependencies:
-      acorn: 8.15.0
-      es-module-lexer: 1.7.0
-      fast-glob: 3.3.3
-      magic-string: 0.30.21
-
   vite@7.3.1(@types/node@25.0.9)(jiti@1.21.7):
     dependencies:
       esbuild: 0.27.2
@@ -3205,8 +3148,6 @@ snapshots:
       jiti: 1.21.7
 
   webidl-conversions@3.0.1: {}
-
-  whatwg-fetch@3.6.20: {}
 
   whatwg-url@5.0.0:
     dependencies:
