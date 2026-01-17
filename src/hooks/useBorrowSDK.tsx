@@ -616,16 +616,20 @@ export function BorrowSDKProvider({ children }: { children: ReactNode }) {
     setLoading(true);
     setError(null);
     try {
-      const baseWallet = await sdk.ensureBaseWallet();
-      if (!baseWallet) {
-        console.log('[repay] No cached base wallet, requesting signature...');
-        const address = await sdk.requireBaseWallet();
-        setBaseAddress(address);
-      } else if (!baseAddress) {
-        setBaseAddress(baseWallet);
-      }
+      // Use ensureBaseWalletWithSignature() which only sets up base wallet
+      // Unlike setup(), this does NOT create a new loan wallet
+      console.log('[repay] Ensuring base wallet with signature...');
+      const { address: baseWallet, signature: baseWalletSignature } = await sdk.ensureBaseWalletWithSignature();
+      setBaseAddress(baseWallet);
 
-      console.log('[repay] Using base wallet for repayment:', sdk.baseWalletAddress);
+      console.log('[repay] Using base wallet for repayment:', {
+        address: baseWallet,
+        hasSignature: !!baseWalletSignature,
+      });
+
+      if (!baseWalletSignature) {
+        throw new Error('Failed to obtain wallet signature. Please try again.');
+      }
 
       const loan = transactions.find(t => t.id === originalBorrowId);
       const loanAmount = loan ? parseFloat(loan.amount) : 0;
@@ -637,12 +641,14 @@ export function BorrowSDKProvider({ children }: { children: ReactNode }) {
         repayAmount,
         loanAmount,
         isPartialRepay,
-        sourceWallet: sdk.baseWalletAddress,
+        sourceWallet: baseWallet,
         options
       });
 
       const transactionId = await sdk.repay(originalBorrowId, repayAmount, {
         trackWorkflow: false,
+        sourceWalletAddress: baseWallet,
+        sourceWalletSignature: baseWalletSignature,
         ...options
       });
       await loadTransactions();
@@ -653,7 +659,7 @@ export function BorrowSDKProvider({ children }: { children: ReactNode }) {
     } finally {
       setLoading(false);
     }
-  }, [sdk, loadTransactions, transactions, baseAddress]);
+  }, [sdk, loadTransactions, transactions]);
 
   // Get repay status
   const getRepayStatus = useCallback(async (transactionId: string) => {
@@ -752,8 +758,43 @@ export function BorrowSDKProvider({ children }: { children: ReactNode }) {
   // Withdraw collateral
   const withdrawCollateral = useCallback(async (loanId: string, amount: string, address: string) => {
     if (!sdk) throw new Error('SDK not initialized');
-    return sdk.withdrawCollateral(loanId, amount, address);
-  }, [sdk]);
+    setLoading(true);
+    setError(null);
+    try {
+      // Use ensureBaseWalletWithSignature() which only sets up base wallet
+      // Unlike setup(), this does NOT create a new loan wallet
+      console.log('[withdrawCollateral] Ensuring base wallet with signature...');
+      const { address: baseWallet, signature: baseWalletSignature } = await sdk.ensureBaseWalletWithSignature();
+      setBaseAddress(baseWallet);
+
+      console.log('[withdrawCollateral] Using base wallet:', {
+        address: baseWallet,
+        hasSignature: !!baseWalletSignature,
+      });
+
+      if (!baseWalletSignature) {
+        throw new Error('Failed to obtain wallet signature. Please try again.');
+      }
+
+      // Get the loan to find its loanIndex
+      const loan = transactions.find(t => t.id === loanId);
+      const loanIndex = loan?.borrowTransaction?.loanIndex ?? 0;
+
+      const transactionId = await sdk.withdrawCollateral(loanId, amount, address, {
+        sourceWalletAddress: baseWallet,
+        sourceWalletSignature: baseWalletSignature,
+        loanIndex,
+      });
+
+      await loadTransactions();
+      return transactionId;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Withdraw failed');
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, [sdk, transactions, loadTransactions]);
 
   // Withdraw to EVM (adapt signature to match SDK's object-based params)
   const withdrawToEVM = useCallback(async (chain: any, amount: string, destinationAddress: string) => {
