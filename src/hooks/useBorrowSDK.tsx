@@ -799,12 +799,22 @@ export function BorrowSDKProvider({ children }: { children: ReactNode }) {
   // Withdraw to EVM (adapt signature to match SDK's object-based params)
   const withdrawToEVM = useCallback(async (chain: any, amount: string, destinationAddress: string) => {
     if (!sdk) throw new Error('SDK not initialized');
+
+    // Ensure base wallet is set up before withdrawal (same pattern as repay/withdrawCollateral)
+    const { address: baseWallet } = await sdk.ensureBaseWalletWithSignature();
+    setBaseAddress(baseWallet);
+
     return sdk.withdrawToEVM({ chain, amount, destinationAddress });
   }, [sdk]);
 
   // Withdraw to Bitcoin (adapt signature to match SDK's object-based params)
   const withdrawToBitcoin = useCallback(async (chain: any, amount: string, assetSymbol: string, btcAddress: string) => {
     if (!sdk) throw new Error('SDK not initialized');
+
+    // Ensure base wallet is set up before withdrawal (same pattern as repay/withdrawCollateral)
+    const { address: baseWallet } = await sdk.ensureBaseWalletWithSignature();
+    setBaseAddress(baseWallet);
+
     return sdk.withdrawToBitcoin({ chain, amount, assetSymbol, btcAddress });
   }, [sdk]);
 
