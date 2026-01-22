@@ -39,8 +39,8 @@ importers:
         specifier: ^1.1.5
         version: 1.2.15(@types/react-dom@19.2.3(@types/react@19.2.8))(@types/react@19.2.8)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
       '@satsterminal-sdk/borrow':
-        specifier: file:../satsterminal-sdk/packages/borrow
-        version: file:../satsterminal-sdk/packages/borrow(typescript@5.9.3)
+        specifier: ^1.6.25
+        version: 1.6.25(typescript@5.9.3)
       class-variance-authority:
         specifier: ^0.7.0
         version: 0.7.1
@@ -941,16 +941,16 @@ packages:
     cpu: [x64]
     os: [win32]
 
-  '@satsterminal-sdk/borrow@file:../satsterminal-sdk/packages/borrow':
-    resolution: {directory: ../satsterminal-sdk/packages/borrow, type: directory}
+  '@satsterminal-sdk/borrow@1.6.25':
+    resolution: {integrity: sha512-bIHUDhjI4OVNNN5mg53ihxgy6YEpVm2twR6uPqpdEaY4SIxnWhW4OZD3kQVd90qonMYNre8/XZxWZZ2IblGYKw==}
     peerDependencies:
       typescript: ^5.0.0
     peerDependenciesMeta:
       typescript:
         optional: true
 
-  '@satsterminal-sdk/core@file:../satsterminal-sdk/packages/core':
-    resolution: {directory: ../satsterminal-sdk/packages/core, type: directory}
+  '@satsterminal-sdk/core@1.6.25':
+    resolution: {integrity: sha512-Fxi6Z4s6AI0uFTQ1D1TFCNjdvH8OR0gnFu3aWnDzKdeoS6LFJTejx/CdLhx5nQDgIn82flyZqNVK+4dEiGEu2A==}
 
   '@scure/base@1.2.6':
     resolution: {integrity: sha512-g/nm5FgUa//MCj1gV09zTJTaM6KBAHqLN907YVQqf7zC49+DcO4B1so4ZX07Ef10Twr6nuqYEH9GEggFXA4Fmg==}
@@ -2412,16 +2412,16 @@ snapshots:
   '@rollup/rollup-win32-x64-msvc@4.55.1':
     optional: true
 
-  '@satsterminal-sdk/borrow@file:../satsterminal-sdk/packages/borrow(typescript@5.9.3)':
+  '@satsterminal-sdk/borrow@1.6.25(typescript@5.9.3)':
     dependencies:
-      '@satsterminal-sdk/core': file:../satsterminal-sdk/packages/core
+      '@satsterminal-sdk/core': 1.6.25
       bignumber.js: 9.3.1
     optionalDependencies:
       typescript: 5.9.3
     transitivePeerDependencies:
       - encoding
 
-  '@satsterminal-sdk/core@file:../satsterminal-sdk/packages/core':
+  '@satsterminal-sdk/core@1.6.25':
     dependencies:
       node-fetch: 2.7.0
     transitivePeerDependencies:
