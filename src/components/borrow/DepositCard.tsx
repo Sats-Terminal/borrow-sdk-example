@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useBorrowSDK } from '@/hooks/useBorrowSDK';
@@ -35,7 +34,6 @@ export function DepositCard({ address, amount, amountBTC }: DepositCardProps) {
       toast({
         title: 'Deposit Sent',
         description: `Transaction: ${txHash.slice(0, 16)}...`,
-        variant: 'success' as 'default',
       });
     } catch (err) {
       toast({
@@ -49,39 +47,43 @@ export function DepositCard({ address, amount, amountBTC }: DepositCardProps) {
   };
 
   return (
-    <Card className="border-primary">
-      <CardHeader className="pb-3">
+    <div className="rounded-xl border-[0.5px] border-orange-200 bg-orange-500/5 overflow-hidden">
+      {/* Header */}
+      <div className="bg-orange-500/10 px-4 py-3 border-b-[0.5px] border-orange-200">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Bitcoin className="h-5 w-5 text-orange-500" />
-            <CardTitle className="text-lg">Deposit Required</CardTitle>
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-orange-500 flex items-center justify-center">
+              <Bitcoin className="h-4 w-4 text-white" />
+            </div>
+            <span className="font-semibold text-sm">Deposit BTC</span>
           </div>
-          <Badge variant="warning">Action Required</Badge>
+          <Badge variant="warning" className="gap-1">
+            <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+            Action Required
+          </Badge>
         </div>
-        <CardDescription>
-          Send the exact amount of BTC to the address below to continue
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {/* Amount Display */}
-        <div className="p-4 bg-orange-500/10 border border-orange-500/20 rounded-lg text-center">
-          <p className="text-sm text-muted-foreground mb-1">Deposit Amount</p>
-          <p className="text-3xl font-bold">{amountBTC.toFixed(8)} BTC</p>
-          <p className="text-sm text-muted-foreground">{amount.toLocaleString()} sats</p>
+      </div>
+
+      <div className="p-4 space-y-4">
+        {/* Amount */}
+        <div className="text-center p-4 bg-white rounded-xl border-[0.5px]">
+          <p className="text-xs text-muted-foreground uppercase tracking-wide font-mono mb-1">Deposit Amount</p>
+          <p className="text-2xl font-bold font-mono">{amountBTC.toFixed(8)}</p>
+          <p className="text-sm text-muted-foreground font-mono">{amount.toLocaleString()} sats</p>
         </div>
 
-        {/* Address Display */}
+        {/* Address */}
         <div className="space-y-2">
-          <p className="text-sm text-muted-foreground">Deposit Address</p>
-          <div className="flex items-center gap-2 p-3 bg-muted rounded-lg">
-            <code className="text-sm font-mono flex-1 break-all">
+          <p className="text-sm font-medium">Deposit Address</p>
+          <div className="flex items-center gap-2 p-3 bg-white rounded-lg border-[0.5px]">
+            <code className="text-xs font-mono flex-1 break-all text-muted-foreground">
               {address}
             </code>
             <Button
               variant="ghost"
               size="sm"
               onClick={copyAddress}
-              className="shrink-0"
+              className="shrink-0 h-8 w-8 p-0"
             >
               {copied ? (
                 <CheckCircle2 className="h-4 w-4 text-green-500" />
@@ -93,39 +95,39 @@ export function DepositCard({ address, amount, amountBTC }: DepositCardProps) {
         </div>
 
         {/* Warning */}
-        <div className="flex items-start gap-2 p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
-          <AlertCircle className="h-4 w-4 text-yellow-600 shrink-0 mt-0.5" />
-          <div className="text-sm text-yellow-700">
-            <p className="font-medium">Important</p>
-            <p>Send the exact amount shown. Sending a different amount may result in failed or delayed processing.</p>
+        <div className="flex items-start gap-2.5 p-3 bg-amber-500/10 border-[0.5px] border-amber-200 rounded-lg">
+          <AlertCircle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
+          <div className="text-xs text-amber-700">
+            <p className="font-semibold">Send exact amount</p>
+            <p className="text-amber-600">Different amounts may cause delays or failures</p>
           </div>
         </div>
 
-        {/* Action Buttons */}
+        {/* Actions */}
         <div className="flex gap-2">
           <Button
             onClick={handleSendDeposit}
             disabled={loading || sending}
-            className="flex-1"
+            variant="accent"
+            className="flex-1 h-10"
           >
             {sending ? (
               <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                <Loader2 className="h-4 w-4 animate-spin" />
                 Sending...
               </>
             ) : (
               <>
-                <Send className="h-4 w-4 mr-2" />
+                <Send className="h-4 w-4" />
                 Send from Wallet
               </>
             )}
           </Button>
-          <Button variant="outline" onClick={copyAddress}>
-            <Copy className="h-4 w-4 mr-2" />
-            Copy Address
+          <Button variant="outline" onClick={copyAddress} className="h-10">
+            <Copy className="h-4 w-4" />
           </Button>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }

@@ -239,17 +239,17 @@ export function LoanDetailsDialog({ open, onOpenChange, loan, onActionComplete }
         </DialogHeader>
 
         {/* Loan Summary */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 py-4">
-          <div className="p-3 bg-muted rounded-lg">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 py-4">
+          <div className="p-3 bg-zinc-50 rounded-xl border-[0.5px]">
             <div className="flex items-center gap-1 text-muted-foreground mb-1">
               <DollarSign className="h-3 w-3" />
               <span className="text-xs">Borrowed</span>
             </div>
-            <p className="font-semibold">${loanAmount.toLocaleString()}</p>
+            <p className="font-semibold font-mono">${loanAmount.toLocaleString()}</p>
             <p className="text-xs text-muted-foreground">USDC</p>
           </div>
 
-          <div className="p-3 bg-muted rounded-lg">
+          <div className="p-3 bg-zinc-50 rounded-xl border-[0.5px]">
             <div className="flex items-center gap-1 text-muted-foreground mb-1">
               <Bitcoin className="h-3 w-3" />
               <span className="text-xs">Collateral</span>
@@ -258,13 +258,13 @@ export function LoanDetailsDialog({ open, onOpenChange, loan, onActionComplete }
               <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
               <>
-                <p className="font-semibold">{totalCollateralBtc.toFixed(6)}</p>
+                <p className="font-semibold font-mono">{totalCollateralBtc.toFixed(6)}</p>
                 <p className="text-xs text-muted-foreground">BTC</p>
               </>
             )}
           </div>
 
-          <div className="p-3 bg-muted rounded-lg">
+          <div className="p-3 bg-zinc-50 rounded-xl border-[0.5px]">
             <div className="flex items-center gap-1 text-muted-foreground mb-1">
               <Shield className="h-3 w-3" />
               <span className="text-xs">Health Factor</span>
@@ -273,7 +273,7 @@ export function LoanDetailsDialog({ open, onOpenChange, loan, onActionComplete }
               <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
               <>
-                <p className={`font-semibold ${healthColor}`}>
+                <p className={`font-semibold font-mono ${healthColor}`}>
                   {healthFactor > 0 ? healthFactor.toFixed(2) : '-'}
                 </p>
                 <p className="text-xs text-muted-foreground">
@@ -283,7 +283,7 @@ export function LoanDetailsDialog({ open, onOpenChange, loan, onActionComplete }
             )}
           </div>
 
-          <div className="p-3 bg-muted rounded-lg">
+          <div className="p-3 bg-zinc-50 rounded-xl border-[0.5px]">
             <div className="flex items-center gap-1 text-muted-foreground mb-1">
               <TrendingUp className="h-3 w-3" />
               <span className="text-xs">Remaining Debt</span>
@@ -292,7 +292,7 @@ export function LoanDetailsDialog({ open, onOpenChange, loan, onActionComplete }
               <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
               <>
-                <p className="font-semibold">${remainingDebt.toLocaleString()}</p>
+                <p className="font-semibold font-mono">${remainingDebt.toLocaleString()}</p>
                 <p className="text-xs text-muted-foreground">USDC</p>
               </>
             )}
@@ -301,7 +301,7 @@ export function LoanDetailsDialog({ open, onOpenChange, loan, onActionComplete }
 
         {/* Base Wallet Address (where borrowed USDC goes) */}
         {usdcWalletAddress && (
-          <div className="flex items-center gap-2 p-2 bg-muted/50 rounded-lg text-sm">
+          <div className="flex items-center gap-2 p-2.5 bg-zinc-50 rounded-lg border-[0.5px] text-sm">
             <span className="text-muted-foreground">Base Wallet:</span>
             <code className="font-mono text-xs">
               {usdcWalletAddress.slice(0, 10)}...{usdcWalletAddress.slice(-8)}
@@ -341,9 +341,9 @@ export function LoanDetailsDialog({ open, onOpenChange, loan, onActionComplete }
 
           {/* Repay Tab */}
           <TabsContent value="repay" className="mt-4 space-y-4">
-            <div className="p-3 bg-muted rounded-lg">
+            <div className="p-3 bg-zinc-50 rounded-xl border-[0.5px]">
               <p className="text-sm text-muted-foreground">Remaining Debt</p>
-              <p className="text-xl font-semibold">${remainingDebt.toLocaleString()} USDC</p>
+              <p className="text-xl font-semibold font-mono">${remainingDebt.toLocaleString()} USDC</p>
             </div>
 
             <div className="space-y-2">
@@ -355,7 +355,7 @@ export function LoanDetailsDialog({ open, onOpenChange, loan, onActionComplete }
                   type="number"
                   value={repayAmount}
                   onChange={(e) => setRepayAmount(e.target.value)}
-                  className="pl-9"
+                  className="pl-9 h-10"
                   min="0"
                   max={remainingDebt}
                 />
@@ -374,7 +374,7 @@ export function LoanDetailsDialog({ open, onOpenChange, loan, onActionComplete }
             </div>
 
             {isFullRepayment && (
-              <div className="space-y-3 p-3 border rounded-lg">
+              <div className="space-y-3 p-3 border-[0.5px] rounded-xl">
                 <div className="flex items-center space-x-2">
                   <Checkbox
                     id="withdrawAfterRepay"
@@ -395,6 +395,7 @@ export function LoanDetailsDialog({ open, onOpenChange, loan, onActionComplete }
                         type="number"
                         value={collateralToWithdrawAfterRepay}
                         onChange={(e) => setCollateralToWithdrawAfterRepay(e.target.value)}
+                        className="h-10"
                         step="0.0001"
                         min="0"
                         max={maxWithdrawableBtc}
@@ -408,7 +409,7 @@ export function LoanDetailsDialog({ open, onOpenChange, loan, onActionComplete }
                         Max
                       </Button>
                     </div>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-xs text-muted-foreground font-mono">
                       Max withdrawable: {maxWithdrawableBtc.toFixed(8)} BTC
                     </p>
                   </div>
@@ -419,11 +420,12 @@ export function LoanDetailsDialog({ open, onOpenChange, loan, onActionComplete }
             <Button
               onClick={handleRepay}
               disabled={repaying || !repayAmount || parseFloat(repayAmount) <= 0}
-              className="w-full"
+              variant="accent"
+              className="w-full h-10"
             >
               {repaying ? (
                 <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  <Loader2 className="h-4 w-4 animate-spin" />
                   Processing...
                 </>
               ) : (
@@ -434,17 +436,17 @@ export function LoanDetailsDialog({ open, onOpenChange, loan, onActionComplete }
 
           {/* Withdraw BTC Tab */}
           <TabsContent value="withdraw-btc" className="mt-4 space-y-4">
-            <div className="p-3 bg-muted rounded-lg">
+            <div className="p-3 bg-zinc-50 rounded-xl border-[0.5px]">
               <p className="text-sm text-muted-foreground">Available to Withdraw</p>
-              <p className="text-xl font-semibold">{maxWithdrawableBtc.toFixed(8)} BTC</p>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-xl font-semibold font-mono">{maxWithdrawableBtc.toFixed(8)} BTC</p>
+              <p className="text-xs text-muted-foreground font-mono">
                 Total Collateral: {totalCollateralBtc.toFixed(8)} BTC
               </p>
             </div>
 
             {/* Warning when debt prevents full withdrawal */}
             {remainingDebt > 0 && maxWithdrawableBtc < totalCollateralBtc && (
-              <div className="flex items-start gap-2 p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg">
+              <div className="flex items-start gap-2.5 p-3 bg-blue-500/5 border-[0.5px] border-blue-200 rounded-xl">
                 <AlertTriangle className="h-4 w-4 text-blue-600 shrink-0 mt-0.5" />
                 <div className="text-sm text-blue-700">
                   <p className="font-medium">Outstanding Debt Detected</p>
@@ -471,6 +473,7 @@ export function LoanDetailsDialog({ open, onOpenChange, loan, onActionComplete }
                   max={maxWithdrawableBtc}
                   value={withdrawBtcAmount}
                   onChange={(e) => setWithdrawBtcAmount(e.target.value)}
+                  className="h-10"
                 />
                 <Button
                   variant="ghost"
@@ -490,15 +493,16 @@ export function LoanDetailsDialog({ open, onOpenChange, loan, onActionComplete }
                 value={withdrawBtcAddress}
                 onChange={(e) => setWithdrawBtcAddress(e.target.value)}
                 placeholder="bc1q..."
+                className="h-10"
               />
               <p className="text-xs text-muted-foreground">
                 Default: Your connected wallet address
               </p>
             </div>
 
-            <div className="flex items-start gap-2 p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
-              <AlertTriangle className="h-4 w-4 text-yellow-600 shrink-0 mt-0.5" />
-              <p className="text-sm text-yellow-700">
+            <div className="flex items-start gap-2.5 p-3 bg-amber-500/5 border-[0.5px] border-amber-200 rounded-xl">
+              <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
+              <p className="text-sm text-amber-700">
                 Withdrawing collateral will reduce your health factor and may increase liquidation risk.
               </p>
             </div>
@@ -506,16 +510,17 @@ export function LoanDetailsDialog({ open, onOpenChange, loan, onActionComplete }
             <Button
               onClick={handleWithdrawCollateral}
               disabled={repaying || !withdrawBtcAmount || !withdrawBtcAddress || parseFloat(withdrawBtcAmount) <= 0}
-              className="w-full"
+              variant="accent"
+              className="w-full h-10"
             >
               {repaying ? (
                 <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  <Loader2 className="h-4 w-4 animate-spin" />
                   Processing...
                 </>
               ) : (
                 <>
-                  <ArrowDownToLine className="h-4 w-4 mr-2" />
+                  <ArrowDownToLine className="h-4 w-4" />
                   Withdraw {withdrawBtcAmount || '0'} BTC
                 </>
               )}
@@ -524,19 +529,19 @@ export function LoanDetailsDialog({ open, onOpenChange, loan, onActionComplete }
 
           {/* Transfer USDC Tab */}
           <TabsContent value="withdraw-usdc" className="mt-4 space-y-4">
-            <div className="p-3 bg-muted rounded-lg flex items-center justify-between">
+            <div className="p-3 bg-zinc-50 rounded-xl border-[0.5px] flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Transfer USDC from Base Wallet</p>
-                <p className="text-xl font-semibold">${loanAmount.toLocaleString()}</p>
+                <p className="text-xl font-semibold font-mono">${loanAmount.toLocaleString()}</p>
               </div>
-              <Badge variant="secondary" className="gap-1">
+              <Badge variant="success" className="gap-1">
                 <Zap className="h-3 w-3" />
                 Gasless
               </Badge>
             </div>
 
             {usdcWalletAddress && (
-              <div className="p-2 bg-blue-500/10 border border-blue-500/20 rounded-lg">
+              <div className="p-2.5 bg-blue-500/5 border-[0.5px] border-blue-200 rounded-lg">
                 <p className="text-xs text-blue-700">
                   <span className="font-medium">From Base Wallet:</span>
                   <code className="ml-1 font-mono">{usdcWalletAddress.slice(0, 10)}...{usdcWalletAddress.slice(-8)}</code>
@@ -555,7 +560,7 @@ export function LoanDetailsDialog({ open, onOpenChange, loan, onActionComplete }
                   min="0"
                   value={withdrawUsdcAmount}
                   onChange={(e) => setWithdrawUsdcAmount(e.target.value)}
-                  className="pl-9"
+                  className="pl-9 h-10"
                   placeholder="100.00"
                 />
               </div>
@@ -568,10 +573,11 @@ export function LoanDetailsDialog({ open, onOpenChange, loan, onActionComplete }
                 value={withdrawUsdcAddress}
                 onChange={(e) => setWithdrawUsdcAddress(e.target.value)}
                 placeholder="0x..."
+                className="h-10"
               />
             </div>
 
-            <div className="p-3 bg-green-500/10 border border-green-500/20 rounded-lg">
+            <div className="p-3 bg-green-500/5 border-[0.5px] border-green-200 rounded-xl">
               <div className="flex items-center gap-2 text-green-700">
                 <Zap className="h-4 w-4" />
                 <span className="text-sm font-medium">Gasless Transfer</span>
@@ -584,16 +590,17 @@ export function LoanDetailsDialog({ open, onOpenChange, loan, onActionComplete }
             <Button
               onClick={handleWithdrawUsdc}
               disabled={repaying || !withdrawUsdcAmount || !withdrawUsdcAddress || parseFloat(withdrawUsdcAmount) <= 0}
-              className="w-full"
+              variant="accent"
+              className="w-full h-10"
             >
               {repaying ? (
                 <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  <Loader2 className="h-4 w-4 animate-spin" />
                   Processing...
                 </>
               ) : (
                 <>
-                  <Send className="h-4 w-4 mr-2" />
+                  <Send className="h-4 w-4" />
                   Send ${withdrawUsdcAmount || '0'} USDC
                 </>
               )}

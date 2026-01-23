@@ -1,19 +1,18 @@
 import { useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useBorrowSDK } from '@/hooks/useBorrowSDK';
 import { useToast } from '@/hooks/use-toast';
 import { Units } from '@satsterminal-sdk/borrow';
-import { Loader2, ArrowRight, Percent, Shield, Zap, Bitcoin, DollarSign, Link } from 'lucide-react';
+import { Loader2, ArrowRight, Bitcoin, DollarSign } from 'lucide-react';
 import type { Quote } from '@satsterminal-sdk/borrow';
 
 export function QuoteDisplay() {
-  const { filteredQuotes, borrow, borrowing, baseAddress, protocolFilter } = useBorrowSDK();
+  const { filteredQuotes, borrow, borrowing, baseAddress, protocolFilter, quotesLoading } = useBorrowSDK();
   const { toast } = useToast();
   const [selectedQuote, setSelectedQuote] = useState<Quote | null>(null);
 
-  // Use filtered quotes for display
   const quotes = filteredQuotes;
 
   const handleBorrow = async (quote: Quote) => {
@@ -22,7 +21,7 @@ export function QuoteDisplay() {
       const workflowId = await borrow(quote, baseAddress || undefined);
       toast({
         title: 'Borrow Initiated',
-        description: 'Workflow started. See status below for deposit address and progress.',
+        description: 'Check the workflow status below for deposit instructions.',
       });
       console.log('[QuoteDisplay] Borrow initiated, workflowId:', workflowId);
     } catch (err) {
@@ -33,150 +32,140 @@ export function QuoteDisplay() {
       });
       setSelectedQuote(null);
     }
-    // Don't reset selectedQuote here - keep showing loading state until workflow updates come in
   };
 
-  if (quotes.length === 0) {
-    const protocolName = protocolFilter === 'all' ? 'all protocols' : protocolFilter.toUpperCase();
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2.5">
-            <div className="p-2 rounded-full bg-zinc-100">
-              <Zap className="h-5 w-5 text-muted-foreground" />
-            </div>
-            Loan Quotes
-          </CardTitle>
-          <CardDescription>
-            {protocolFilter !== 'all'
-              ? `Showing ${protocolFilter.toUpperCase()} quotes only`
-              : 'Available quotes will appear here'}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="text-center py-12 px-4">
-            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-zinc-50 flex items-center justify-center">
-              <Zap className="h-8 w-8 text-zinc-300" />
-            </div>
-            <p className="text-muted-foreground">
-              Enter your loan details and click "Get Loan Quotes" to see available options from {protocolName}
-            </p>
+  // Skeleton for loading
+  const SkeletonQuote = () => (
+    <div className="p-4 rounded-xl border-[0.5px] bg-zinc-50 animate-pulse">
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-lg bg-zinc-200" />
+          <div className="space-y-1">
+            <div className="h-4 w-16 bg-zinc-200 rounded" />
+            <div className="h-3 w-12 bg-zinc-200 rounded" />
           </div>
-        </CardContent>
-      </Card>
-    );
-  }
+        </div>
+        <div className="h-6 w-16 bg-zinc-200 rounded" />
+      </div>
+      <div className="grid grid-cols-2 gap-2.5 mb-4">
+        <div className="h-16 bg-zinc-100 rounded-lg" />
+        <div className="h-16 bg-zinc-100 rounded-lg" />
+      </div>
+      <div className="h-10 bg-zinc-200 rounded-lg" />
+    </div>
+  );
 
   return (
-    <Card>
+    <Card className="min-h-[320px] flex flex-col">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2.5">
-          <div className="p-2 rounded-full bg-green-500/10">
-            <Shield className="h-5 w-5 text-green-600" />
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle>
+              {quotes.length > 0 ? `${quotes.length} Quote${quotes.length !== 1 ? 's' : ''} Found` : 'Available Quotes'}
+            </CardTitle>
+            <CardDescription>
+              {protocolFilter !== 'all'
+                ? `Showing ${protocolFilter.toUpperCase()} quotes only`
+                : quotes.length > 0 ? 'From all protocols' : 'Enter loan details and click "Get Quotes"'}
+            </CardDescription>
           </div>
-          Available Quotes
-        </CardTitle>
-        <CardDescription>
-          {quotes.length} quote{quotes.length !== 1 ? 's' : ''} found
-          {protocolFilter !== 'all' && ` (${protocolFilter.toUpperCase()} only)`}
-        </CardDescription>
+          {quotes.length > 0 && <Badge variant="success">Best rate first</Badge>}
+        </div>
       </CardHeader>
-      <CardContent className="space-y-4">
-        {quotes.map((quote, index) => {
-          const variableApy = parseFloat(quote.borrowApy?.variable || '0') || 0;
-          const rawEffectiveApy = quote.effectiveApy?.variable
-            ? parseFloat(quote.effectiveApy.variable)
-            : null;
-          // Only use effectiveApy if it's a valid finite number
-          const effectiveApy = (rawEffectiveApy !== null && isFinite(rawEffectiveApy))
-            ? rawEffectiveApy
-            : variableApy;
+      <CardContent className="flex-1">
+        {/* Loading state */}
+        {quotesLoading && (
+          <div className="space-y-3">
+            <SkeletonQuote />
+            <SkeletonQuote />
+          </div>
+        )}
 
-          return (
-            <div
-              key={`${quote.protocol}-${index}`}
-              className={`p-5 border rounded-xl transition-all ${index === 0 ? 'border-orange-500/50 bg-orange-500/5' : 'hover:border-orange-500/30'}`}
-            >
-              {/* Header */}
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-full bg-zinc-100">
-                    <Shield className="h-5 w-5 text-zinc-600" />
-                  </div>
-                  <div>
-                    <span className="font-semibold capitalize">{quote.protocol}</span>
-                    <div className="flex items-center gap-2 mt-0.5">
-                      <Badge variant="secondary" className="capitalize text-xs">
-                        <Link className="h-3 w-3 mr-1" />
-                        {quote.chain}
-                      </Badge>
+        {/* Empty state */}
+        {!quotesLoading && quotes.length === 0 && (
+          <div className="flex items-center justify-center h-full min-h-[180px]">
+            <p className="text-sm text-muted-foreground text-center max-w-xs">
+              Configure your loan parameters and we'll find the best rates
+            </p>
+          </div>
+        )}
+
+        {/* Quotes list */}
+        {!quotesLoading && quotes.length > 0 && (
+          <div className="space-y-3">
+            {quotes.map((quote, index) => {
+              const variableApy = parseFloat(quote.borrowApy?.variable || '0') || 0;
+              const isBest = index === 0;
+              const isSelected = borrowing && selectedQuote === quote;
+
+              return (
+                <div
+                  key={`${quote.protocol}-${index}`}
+                  className={`p-4 rounded-xl border-[0.5px] transition-colors ${
+                    isBest ? 'bg-orange-500/5 border-orange-200' : 'bg-zinc-50'
+                  }`}
+                >
+                  {/* Header */}
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold text-sm capitalize">{quote.protocol}</span>
+                      <Badge variant="secondary" className="text-xs capitalize">{quote.chain}</Badge>
+                      {isBest && <Badge variant="success" className="text-xs">Best</Badge>}
+                    </div>
+                    <div className="text-right">
+                      <p className="text-lg font-bold font-mono text-orange-600">
+                        {variableApy.toFixed(2)}%
+                      </p>
+                      <p className="text-xs text-muted-foreground">APY</p>
                     </div>
                   </div>
-                </div>
-                {index === 0 && (
-                  <Badge variant="success" className="text-xs">Best Rate</Badge>
-                )}
-              </div>
 
-              {/* Metrics Grid - 3 columns */}
-              <div className="grid grid-cols-3 gap-3 mb-4">
-                <div className="p-3 bg-zinc-50 rounded-lg">
-                  <div className="flex items-center gap-1 text-muted-foreground mb-1">
-                    <DollarSign className="h-3 w-3" />
-                    <span className="text-xs">Loan</span>
+                  {/* Metrics */}
+                  <div className="grid grid-cols-2 gap-2 mb-3">
+                    <div className="flex items-center gap-2 p-2 rounded-lg bg-white border-[0.5px]">
+                      <DollarSign className="h-4 w-4 text-green-600" />
+                      <div>
+                        <p className="text-xs text-muted-foreground">Loan</p>
+                        <p className="font-semibold font-mono text-sm">
+                          ${parseFloat(quote.loanAmount).toLocaleString()}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 p-2 rounded-lg bg-white border-[0.5px]">
+                      <Bitcoin className="h-4 w-4 text-orange-500" />
+                      <div>
+                        <p className="text-xs text-muted-foreground">Collateral</p>
+                        <p className="font-semibold font-mono text-sm">
+                          {Units.formatBtc(Units.normalizeToBtc(quote.collateralAmount), 6)}
+                        </p>
+                      </div>
+                    </div>
                   </div>
-                  <p className="font-semibold font-mono">
-                    ${parseFloat(quote.loanAmount).toLocaleString()}
-                  </p>
-                </div>
-                <div className="p-3 bg-zinc-50 rounded-lg">
-                  <div className="flex items-center gap-1 text-muted-foreground mb-1">
-                    <Bitcoin className="h-3 w-3" />
-                    <span className="text-xs">Collateral</span>
-                  </div>
-                  <p className="font-semibold font-mono">
-                    {Units.formatBtc(Units.normalizeToBtc(quote.collateralAmount), 6)}
-                  </p>
-                </div>
-                <div className="p-3 bg-zinc-50 rounded-lg">
-                  <div className="flex items-center gap-1 text-muted-foreground mb-1">
-                    <Percent className="h-3 w-3" />
-                    <span className="text-xs">APY</span>
-                  </div>
-                  <p className="font-semibold font-mono text-orange-600">
-                    {variableApy.toFixed(2)}%
-                  </p>
-                </div>
-              </div>
 
-              {effectiveApy !== variableApy && isFinite(effectiveApy) && (
-                <div className="text-sm text-green-600 mb-4 flex items-center gap-1.5 bg-green-500/10 px-3 py-2 rounded-lg">
-                  <Zap className="h-3.5 w-3.5" />
-                  Effective APY after rewards: <span className="font-semibold font-mono">{effectiveApy.toFixed(2)}%</span>
+                  {/* Action */}
+                  <Button
+                    onClick={() => handleBorrow(quote)}
+                    disabled={isSelected}
+                    variant={isBest ? "accent" : "secondary"}
+                    className="w-full h-9"
+                  >
+                    {isSelected ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Initiating...
+                      </>
+                    ) : (
+                      <>
+                        Borrow with {quote.protocol}
+                        <ArrowRight className="h-4 w-4" />
+                      </>
+                    )}
+                  </Button>
                 </div>
-              )}
-
-              <Button
-                onClick={() => handleBorrow(quote)}
-                disabled={borrowing && selectedQuote === quote}
-                variant={index === 0 ? "accent" : "outline"}
-                className="w-full h-11 uppercase tracking-wide font-semibold"
-              >
-                {borrowing && selectedQuote === quote ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Processing...
-                  </>
-                ) : (
-                  <>
-                    Borrow with {quote.protocol}
-                    <ArrowRight className="h-4 w-4" />
-                  </>
-                )}
-              </Button>
-            </div>
-          );
-        })}
+              );
+            })}
+          </div>
+        )}
       </CardContent>
     </Card>
   );

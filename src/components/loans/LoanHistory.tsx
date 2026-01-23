@@ -1,25 +1,24 @@
 import { useEffect, useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { useBorrowSDK } from '@/hooks/useBorrowSDK';
 import { LoanDetailsDialog } from './LoanDetailsDialog';
 import type { UserTransaction } from '@satsterminal-sdk/borrow';
 import { Units } from '@satsterminal-sdk/borrow';
 import {
-  RefreshCw, Loader2, FileText, History, ChevronRight,
-  Bitcoin, DollarSign, Wallet
+  RefreshCw, Loader2, ChevronRight,
+  Bitcoin, Clock, CheckCircle2, AlertCircle
 } from 'lucide-react';
 
 export function LoanHistory() {
   const { isConnected, transactions, loadTransactions, transactionsLoading } = useBorrowSDK();
   const [selectedLoan, setSelectedLoan] = useState<UserTransaction | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [hasLoaded, setHasLoaded] = useState(false);
 
   useEffect(() => {
     if (isConnected) {
-      loadTransactions();
+      loadTransactions().finally(() => setHasLoaded(true));
     }
   }, [isConnected, loadTransactions]);
 
@@ -30,242 +29,189 @@ export function LoanHistory() {
 
   const handleDialogClose = (open: boolean) => {
     setDialogOpen(open);
-    if (!open) {
-      setSelectedLoan(null);
-    }
-  };
-
-  const handleActionComplete = () => {
-    loadTransactions();
+    if (!open) setSelectedLoan(null);
   };
 
   const getStatusBadge = (status: string) => {
-    const normalizedStatus = status?.toLowerCase() || '';
-    switch (normalizedStatus) {
+    const s = status?.toLowerCase() || '';
+    switch (s) {
       case 'active':
-        return <Badge variant="success">Active</Badge>;
+        return (
+          <Badge variant="success" className="gap-1">
+            <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+            Active
+          </Badge>
+        );
       case 'completed':
       case 'repaid':
       case 'closed':
-        return <Badge variant="secondary">Repaid</Badge>;
+        return (
+          <Badge variant="secondary" className="gap-1">
+            <CheckCircle2 className="h-3 w-3" />
+            Repaid
+          </Badge>
+        );
       case 'pending':
-        return <Badge variant="warning">Pending</Badge>;
       case 'awaiting_deposit':
-        return <Badge variant="warning">Awaiting Deposit</Badge>;
+        return (
+          <Badge variant="warning" className="gap-1">
+            <Clock className="h-3 w-3" />
+            Pending
+          </Badge>
+        );
       case 'processing':
-        return <Badge variant="outline">Processing</Badge>;
+        return (
+          <Badge variant="outline" className="gap-1">
+            <Loader2 className="h-3 w-3 animate-spin" />
+            Processing
+          </Badge>
+        );
       case 'failed':
-        return <Badge variant="destructive">Failed</Badge>;
+        return (
+          <Badge variant="destructive" className="gap-1">
+            <AlertCircle className="h-3 w-3" />
+            Failed
+          </Badge>
+        );
       default:
         return <Badge variant="outline">{status || 'Unknown'}</Badge>;
     }
   };
 
-  // A loan is active if status is 'active' (after mapStatus normalization)
-  const isLoanActive = (status: string) => {
-    const normalizedStatus = status?.toLowerCase() || '';
-    return normalizedStatus === 'active';
-  };
-
-  // Loans that can be clicked for details/actions
-  const isLoanClickable = (status: string) => {
-    const normalizedStatus = status?.toLowerCase() || '';
-    return normalizedStatus === 'active' || normalizedStatus === 'completed' || normalizedStatus === 'repaid';
+  const isClickable = (status: string) => {
+    const s = status?.toLowerCase() || '';
+    return s === 'active' || s === 'completed' || s === 'repaid';
   };
 
   const formatDate = (timestamp: number) => {
-    return new Date(timestamp).toLocaleDateString();
+    return new Date(timestamp).toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+    });
   };
 
-  const formatTime = (timestamp: number) => {
-    return new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  };
-
-  const activeLoans = transactions.filter(t => isLoanActive(t.status));
-  const otherTransactions = transactions.filter(t => !isLoanActive(t.status));
+  // Skeleton row for loading state
+  const SkeletonRow = () => (
+    <div className="flex items-center justify-between px-4 py-3 animate-pulse">
+      <div className="flex items-center gap-3">
+        <div className="w-10 h-10 rounded-lg bg-zinc-100" />
+        <div className="space-y-2">
+          <div className="h-4 w-20 bg-zinc-100 rounded" />
+          <div className="h-3 w-28 bg-zinc-100 rounded" />
+        </div>
+      </div>
+      <div className="flex items-center gap-3">
+        <div className="h-5 w-16 bg-zinc-100 rounded" />
+        <div className="h-4 w-12 bg-zinc-100 rounded" />
+      </div>
+    </div>
+  );
 
   return (
-    <div className="space-y-6">
-      {/* Active Loans - Clickable Cards */}
-      {activeLoans.length > 0 && (
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold flex items-center gap-2.5">
-              <div className="p-2 rounded-full bg-orange-500/10">
-                <Wallet className="h-5 w-5 text-orange-500" />
-              </div>
-              Active Loans
-            </h2>
-            <Button variant="outline" size="sm" onClick={loadTransactions} disabled={transactionsLoading}>
-              {transactionsLoading ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <RefreshCw className="h-4 w-4" />
-              )}
-            </Button>
+    <>
+      {/* Fixed container - always the same structure */}
+      <div className="rounded-xl border-[0.5px] bg-card overflow-hidden min-h-[400px] flex flex-col">
+        {/* Header - always visible */}
+        <div className="flex items-center justify-between p-4 border-b-[0.5px]">
+          <div>
+            <h2 className="font-semibold">My Loans</h2>
+            <p className="text-sm text-muted-foreground">
+              {hasLoaded ? `${transactions.length} transaction${transactions.length !== 1 ? 's' : ''}` : 'Loading...'}
+            </p>
           </div>
-          <div className="grid gap-3">
-            {activeLoans.map((loan) => {
-              const collateralAmount = loan.borrowTransaction?.collateralAmount || '0';
-              const collateralBtc = parseFloat(Units.normalizeToBtc(collateralAmount));
-              const protocol = loan.borrowTransaction?.protocol || 'AAVE';
-              const chain = loan.borrowTransaction?.chain || 'BASE';
-
-              return (
-                <Card
-                  key={loan.id}
-                  className="cursor-pointer hover:border-orange-500/50 transition-all hover:shadow-md"
-                  onClick={() => handleLoanClick(loan)}
-                >
-                  <CardContent className="p-5">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-4">
-                        <div className="p-2.5 rounded-full bg-orange-500/10">
-                          <DollarSign className="h-5 w-5 text-orange-500" />
-                        </div>
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <p className="font-semibold text-xl font-mono">
-                              ${parseFloat(loan.amount).toLocaleString()}
-                            </p>
-                            <Badge variant="success">Active</Badge>
-                          </div>
-                          <div className="flex items-center gap-3 text-sm text-muted-foreground mt-1">
-                            <span className="flex items-center gap-1.5 font-mono">
-                              <Bitcoin className="h-3.5 w-3.5 text-orange-500" />
-                              {collateralBtc.toFixed(6)} BTC
-                            </span>
-                            <span>•</span>
-                            <span>{protocol}</span>
-                            <Badge variant="secondary" className="text-xs capitalize">{chain}</Badge>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <span className="text-sm text-muted-foreground font-mono">
-                          {formatDate(loan.timestamp)}
-                        </span>
-                        <ChevronRight className="h-5 w-5 text-muted-foreground" />
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
-          <p className="text-sm text-muted-foreground text-center">
-            Click on a loan to repay, withdraw collateral, or transfer USDC
-          </p>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => loadTransactions()}
+            disabled={transactionsLoading}
+            className="gap-2"
+          >
+            {transactionsLoading ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <RefreshCw className="h-4 w-4" />
+            )}
+          </Button>
         </div>
-      )}
 
-      {/* Transaction History */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2.5">
-              <div className="p-2 rounded-full bg-zinc-100">
-                <History className="h-5 w-5 text-muted-foreground" />
-              </div>
-              <div>
-                <CardTitle>Transaction History</CardTitle>
-                <CardDescription>
-                  {transactions.length} total transaction{transactions.length !== 1 ? 's' : ''}
-                </CardDescription>
-              </div>
-            </div>
-            <Button variant="outline" size="sm" onClick={loadTransactions} disabled={transactionsLoading}>
-              {transactionsLoading ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <>
-                  <RefreshCw className="h-4 w-4" />
-                  Refresh
-                </>
-              )}
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {otherTransactions.length > 0 ? (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Loan</TableHead>
-                  <TableHead>Collateral</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Date</TableHead>
-                  <TableHead></TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {otherTransactions.map((tx) => {
-                  const collateralAmount = tx.borrowTransaction?.collateralAmount || '0';
-                  const collateralBtc = parseFloat(Units.normalizeToBtc(collateralAmount));
-                  const clickable = isLoanClickable(tx.status);
-
-                  return (
-                    <TableRow
-                      key={tx.id}
-                      className={clickable ? 'cursor-pointer hover:bg-muted/50' : ''}
-                      onClick={() => clickable && handleLoanClick(tx)}
-                    >
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <DollarSign className="h-4 w-4 text-muted-foreground" />
-                          <span className="font-medium">
-                            ${parseFloat(tx.amount).toLocaleString()} {tx.currency}
-                          </span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-1 text-muted-foreground">
-                          <Bitcoin className="h-3 w-3" />
-                          <span>{collateralBtc.toFixed(6)} BTC</span>
-                        </div>
-                      </TableCell>
-                      <TableCell>{getStatusBadge(tx.status)}</TableCell>
-                      <TableCell className="text-muted-foreground">
-                        <div className="flex flex-col">
-                          <span>{formatDate(tx.timestamp)}</span>
-                          <span className="text-xs">{formatTime(tx.timestamp)}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        {clickable && (
-                          <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          ) : activeLoans.length === 0 ? (
-            <div className="text-center py-16">
-              <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-zinc-50 flex items-center justify-center">
-                <FileText className="h-8 w-8 text-zinc-300" />
-              </div>
-              <p className="text-muted-foreground font-medium">No transactions yet</p>
-              <p className="text-sm text-muted-foreground mt-1">
-                Your loan history will appear here
-              </p>
-            </div>
-          ) : (
-            <div className="text-center py-8 text-muted-foreground">
-              <p>All your loans are active. Click on them above to manage.</p>
+        {/* Content area - fixed height container */}
+        <div className="flex-1">
+          {/* Loading state */}
+          {!hasLoaded && (
+            <div className="divide-y divide-border">
+              <SkeletonRow />
+              <SkeletonRow />
+              <SkeletonRow />
             </div>
           )}
-        </CardContent>
-      </Card>
 
-      {/* Loan Details Dialog */}
+          {/* Empty state */}
+          {hasLoaded && transactions.length === 0 && (
+            <div className="flex items-center justify-center h-full min-h-[300px]">
+              <div className="text-center">
+                <p className="text-sm text-muted-foreground">No loans yet</p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Create your first loan in the Borrow tab
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Transactions list */}
+          {hasLoaded && transactions.length > 0 && (
+            <div className="divide-y divide-border">
+              {transactions.map((tx) => {
+                const collateralAmount = tx.borrowTransaction?.collateralAmount || '0';
+                const collateralBtc = parseFloat(Units.normalizeToBtc(collateralAmount));
+                const protocol = tx.borrowTransaction?.protocol || 'AAVE';
+                const chain = tx.borrowTransaction?.chain || 'Base';
+                const clickable = isClickable(tx.status);
+
+                return (
+                  <div
+                    key={tx.id}
+                    className={`flex items-center justify-between px-4 py-3 transition-colors ${
+                      clickable ? 'cursor-pointer hover:bg-zinc-50' : ''
+                    }`}
+                    onClick={() => clickable && handleLoanClick(tx)}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-lg bg-zinc-100 flex items-center justify-center">
+                        <Bitcoin className="h-5 w-5 text-orange-500" />
+                      </div>
+                      <div>
+                        <p className="font-semibold font-mono">
+                          ${parseFloat(tx.amount).toLocaleString()}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {collateralBtc.toFixed(4)} BTC · {protocol} · {chain}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      {getStatusBadge(tx.status)}
+                      <span className="text-xs text-muted-foreground font-mono hidden sm:block">
+                        {formatDate(tx.timestamp)}
+                      </span>
+                      {clickable && (
+                        <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Dialog */}
       <LoanDetailsDialog
         open={dialogOpen}
         onOpenChange={handleDialogClose}
         loan={selectedLoan}
-        onActionComplete={handleActionComplete}
+        onActionComplete={() => loadTransactions()}
       />
-    </div>
+    </>
   );
 }

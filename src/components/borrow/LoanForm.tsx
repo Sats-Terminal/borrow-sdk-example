@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
+import { Badge } from '@/components/ui/badge';
 import {
   Select,
   SelectContent,
@@ -14,28 +15,23 @@ import {
 import { useBorrowSDK } from '@/hooks/useBorrowSDK';
 import { useToast } from '@/hooks/use-toast';
 import { Units } from '@satsterminal-sdk/borrow';
-import { Loader2, Calculator, Bitcoin, Shield } from 'lucide-react';
+import { Loader2, Bitcoin, ChevronRight } from 'lucide-react';
 
-// Protocol options for filtering quotes
 type ProtocolFilter = 'all' | 'aave' | 'morpho';
 
 export function LoanForm() {
   const { isConnected, fetchQuotes, quotesLoading, error, protocolFilter, setProtocolFilter } = useBorrowSDK();
   const { toast } = useToast();
 
-  // Minimum 0.0001 BTC (10,000 sats) - bridge minimum
-  const [collateral, setCollateral] = useState('0.001');
+  const [collateral, setCollateral] = useState('0.01');
   const [ltv, setLtv] = useState(50);
   const [btcPrice, setBtcPrice] = useState<number | null>(null);
-  const MIN_COLLATERAL_BTC = 0.0001; // 10,000 sats minimum
+  const MIN_COLLATERAL_BTC = 0.0001;
 
-  // Calculate loan amount based on collateral and LTV
   const collateralValue = btcPrice ? parseFloat(collateral) * btcPrice : 0;
   const estimatedLoan = collateralValue * (ltv / 100);
 
-  // Fetch BTC price on mount
   useEffect(() => {
-    // Mock BTC price - in production, fetch from API
     setBtcPrice(95000);
   }, []);
 
@@ -70,10 +66,6 @@ export function LoanForm() {
 
     try {
       await fetchQuotes(collateral, estimatedLoan.toFixed(2), ltv);
-      toast({
-        title: 'Quotes Retrieved',
-        description: 'Available loan quotes are now displayed',
-      });
     } catch (err) {
       toast({
         title: 'Error',
@@ -83,88 +75,81 @@ export function LoanForm() {
     }
   };
 
+  const getLtvVariant = () => {
+    if (ltv <= 40) return 'success';
+    if (ltv <= 60) return 'warning';
+    return 'destructive';
+  };
+
   return (
     <Card>
-      <CardHeader className="pb-4">
-        <CardTitle className="flex items-center gap-2.5">
-          <div className="p-2 rounded-full bg-orange-500/10">
-            <Bitcoin className="h-5 w-5 text-orange-500" />
+      <CardHeader>
+        <div className="flex items-center gap-2.5">
+          <div className="w-9 h-9 rounded-lg bg-orange-500 flex items-center justify-center">
+            <Bitcoin className="h-4 w-4 text-white" />
           </div>
-          New Loan
-        </CardTitle>
-        <CardDescription>
-          Enter your collateral details to get loan quotes
-        </CardDescription>
+          <div>
+            <CardTitle>New Loan</CardTitle>
+            <CardDescription>BTC to USDC</CardDescription>
+          </div>
+        </div>
       </CardHeader>
-      <CardContent className="space-y-6">
-        {/* BTC Price Display */}
-        {btcPrice && (
-          <div className="flex items-center justify-between p-4 bg-zinc-50 rounded-lg border border-zinc-100">
-            <div>
-              <p className="text-xs text-muted-foreground uppercase tracking-wide">BTC Price</p>
-              <p className="text-lg font-semibold font-mono">${btcPrice.toLocaleString()}</p>
-            </div>
-            <div className="p-2 rounded-full bg-orange-500/10">
+
+      <CardContent className="space-y-5">
+        {/* Collateral Input */}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <Label className="text-sm font-medium">Collateral</Label>
+            {btcPrice && (
+              <span className="text-xs text-muted-foreground font-mono">
+                1 BTC = ${btcPrice.toLocaleString()}
+              </span>
+            )}
+          </div>
+          <div className="relative">
+            <div className="absolute left-3 top-1/2 -translate-y-1/2">
               <Bitcoin className="h-4 w-4 text-orange-500" />
             </div>
-          </div>
-        )}
-
-        {/* Collateral Input */}
-        <div className="space-y-3">
-          <Label htmlFor="collateral" className="text-sm font-medium">Collateral Amount</Label>
-          <div className="relative">
             <Input
-              id="collateral"
               type="number"
-              step="0.0001"
+              step="0.001"
               min={MIN_COLLATERAL_BTC}
               value={collateral}
               onChange={(e) => setCollateral(e.target.value)}
-              placeholder="0.001"
-              className="pr-16 text-lg font-mono h-12"
+              placeholder="0.01"
+              className="pl-9 pr-12 h-10 font-mono"
             />
-            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm font-medium text-muted-foreground bg-zinc-100 px-2 py-1 rounded">
+            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
               BTC
             </span>
           </div>
-          {btcPrice && (
-            <p className="text-sm text-muted-foreground">
-              ≈ ${collateralValue.toLocaleString(undefined, { maximumFractionDigits: 2 })} USD
-            </p>
-          )}
+          <p className="text-xs text-muted-foreground font-mono">
+            = ${collateralValue.toLocaleString(undefined, { maximumFractionDigits: 0 })} USD
+          </p>
         </div>
 
-        {/* Protocol Selector */}
-        <div className="space-y-3">
-          <Label className="text-sm font-medium flex items-center gap-2">
-            <Shield className="h-4 w-4" />
-            Lending Protocol
-          </Label>
+        {/* Protocol Select */}
+        <div className="space-y-2">
+          <Label className="text-sm font-medium">Protocol</Label>
           <Select value={protocolFilter} onValueChange={(v) => setProtocolFilter(v as ProtocolFilter)}>
-            <SelectTrigger className="h-12">
+            <SelectTrigger className="h-10">
               <SelectValue placeholder="Select protocol" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Protocols</SelectItem>
-              <SelectItem value="aave">Aave Only</SelectItem>
-              <SelectItem value="morpho">Morpho Only</SelectItem>
+              <SelectItem value="aave">Aave</SelectItem>
+              <SelectItem value="morpho">Morpho</SelectItem>
             </SelectContent>
           </Select>
-          <p className="text-xs text-muted-foreground">
-            {protocolFilter === 'morpho'
-              ? 'Morpho Blue offers competitive rates with isolated markets'
-              : protocolFilter === 'aave'
-              ? 'Aave is a battle-tested DeFi lending protocol'
-              : 'Showing quotes from all available lending protocols'}
-          </p>
         </div>
 
         {/* LTV Slider */}
-        <div className="space-y-4">
+        <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <Label className="text-sm font-medium">Loan-to-Value (LTV)</Label>
-            <span className="text-sm font-semibold font-mono bg-zinc-100 px-2 py-1 rounded">{ltv}%</span>
+            <Label className="text-sm font-medium">Loan-to-Value</Label>
+            <Badge variant={getLtvVariant()} className="font-mono">
+              {ltv}%
+            </Badge>
           </div>
           <Slider
             value={[ltv]}
@@ -172,49 +157,46 @@ export function LoanForm() {
             min={10}
             max={75}
             step={5}
-            className="py-2"
           />
           <div className="flex justify-between text-xs text-muted-foreground">
-            <span className="flex items-center gap-1">
-              <span className="w-2 h-2 rounded-full bg-green-500"></span>
-              10% Safer
-            </span>
-            <span className="flex items-center gap-1">
-              75% Higher Risk
-              <span className="w-2 h-2 rounded-full bg-red-500"></span>
-            </span>
+            <span>Safer</span>
+            <span>Higher risk</span>
           </div>
         </div>
 
-        {/* Estimated Loan */}
-        <div className="p-5 border-2 border-orange-500/20 rounded-xl bg-orange-500/5">
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-sm text-muted-foreground">You'll receive</span>
-            <Calculator className="h-4 w-4 text-orange-500" />
-          </div>
-          <p className="text-3xl font-bold font-mono">
-            ${estimatedLoan.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+        {/* Estimated Output */}
+        <div className="p-4 rounded-xl border-[0.5px] bg-zinc-50">
+          <p className="text-xs text-muted-foreground uppercase tracking-wide font-mono mb-1">You'll receive</p>
+          <p className="text-2xl font-bold font-mono">
+            ${estimatedLoan.toLocaleString(undefined, { maximumFractionDigits: 0 })}
           </p>
-          <p className="text-sm text-muted-foreground mt-1">USDC</p>
+          <p className="text-sm text-muted-foreground">USDC</p>
         </div>
 
-        {/* Error Display */}
+        {/* Error */}
         {error && (
-          <div className="p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-2.5">
-            <Calculator className="h-4 w-4 text-red-500 mt-0.5" />
-            <p className="text-sm text-red-700">{error}</p>
+          <div className="p-3 rounded-lg bg-red-500/5 border-[0.5px] border-red-200">
+            <p className="text-sm text-red-600">{error}</p>
           </div>
         )}
 
-        {/* Get Quotes Button */}
-        <Button onClick={handleGetQuotes} disabled={quotesLoading} variant="accent" className="w-full h-12 uppercase tracking-wide font-semibold">
+        {/* CTA Button */}
+        <Button
+          onClick={handleGetQuotes}
+          disabled={quotesLoading}
+          variant="accent"
+          className="w-full h-10"
+        >
           {quotesLoading ? (
             <>
               <Loader2 className="h-4 w-4 animate-spin" />
-              Fetching Quotes...
+              Finding rates...
             </>
           ) : (
-            'Get Loan Quotes'
+            <>
+              Get Quotes
+              <ChevronRight className="h-4 w-4" />
+            </>
           )}
         </Button>
       </CardContent>
