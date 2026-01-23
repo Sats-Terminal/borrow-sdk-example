@@ -1,7 +1,28 @@
 {
   "name": "borrow-sdk-example",
-  "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
+  "description": "Example React application demonstrating integration with the @satsterminal-sdk/borrow SDK for borrowing USDC against Bitcoin collateral",
+  "license": "MIT",
+  "author": "Sats Terminal",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/sats-terminal/borrow-sdk-example"
+  },
+  "homepage": "https://github.com/sats-terminal/borrow-sdk-example#readme",
+  "bugs": {
+    "url": "https://github.com/sats-terminal/borrow-sdk-example/issues"
+  },
+  "keywords": [
+    "bitcoin",
+    "btc",
+    "borrow",
+    "usdc",
+    "defi",
+    "sdk",
+    "example",
+    "react",
+    "typescript"
+  ],
   "type": "module",
   "scripts": {
     "dev": "vite",
