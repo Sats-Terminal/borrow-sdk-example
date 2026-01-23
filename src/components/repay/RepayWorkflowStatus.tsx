@@ -10,7 +10,7 @@ interface RepayWorkflowStatusProps {
 }
 
 export function RepayWorkflowStatus({ workflowId }: RepayWorkflowStatusProps) {
-  const { resumeRepayWorkflow, workflowStatus, loading, error } = useBorrowSDK();
+  const { resumeRepayWorkflow, workflowStatus, repaying, error } = useBorrowSDK();
   const [started, setStarted] = useState(false);
 
   useEffect(() => {
@@ -43,7 +43,7 @@ export function RepayWorkflowStatus({ workflowId }: RepayWorkflowStatusProps) {
     if (workflowStatus?.isComplete) {
       return <CheckCircle2 className="h-5 w-5 text-green-500" />;
     }
-    if (loading) {
+    if (repaying) {
       return <Loader2 className="h-5 w-5 animate-spin text-primary" />;
     }
     return <Clock className="h-5 w-5 text-yellow-500" />;

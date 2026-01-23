@@ -27,7 +27,7 @@ interface LoanDetailsDialogProps {
 export function LoanDetailsDialog({ open, onOpenChange, loan, onActionComplete }: LoanDetailsDialogProps) {
   const {
     repay, withdrawCollateral, withdrawToEVM,
-    btcAddress, baseAddress, loading, getLoanCollateralInfo
+    btcAddress, baseAddress, repaying, getLoanCollateralInfo
   } = useBorrowSDK();
   const { toast } = useToast();
 
@@ -418,10 +418,10 @@ export function LoanDetailsDialog({ open, onOpenChange, loan, onActionComplete }
 
             <Button
               onClick={handleRepay}
-              disabled={loading || !repayAmount || parseFloat(repayAmount) <= 0}
+              disabled={repaying || !repayAmount || parseFloat(repayAmount) <= 0}
               className="w-full"
             >
-              {loading ? (
+              {repaying ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                   Processing...
@@ -505,10 +505,10 @@ export function LoanDetailsDialog({ open, onOpenChange, loan, onActionComplete }
 
             <Button
               onClick={handleWithdrawCollateral}
-              disabled={loading || !withdrawBtcAmount || !withdrawBtcAddress || parseFloat(withdrawBtcAmount) <= 0}
+              disabled={repaying || !withdrawBtcAmount || !withdrawBtcAddress || parseFloat(withdrawBtcAmount) <= 0}
               className="w-full"
             >
-              {loading ? (
+              {repaying ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                   Processing...
@@ -583,10 +583,10 @@ export function LoanDetailsDialog({ open, onOpenChange, loan, onActionComplete }
 
             <Button
               onClick={handleWithdrawUsdc}
-              disabled={loading || !withdrawUsdcAmount || !withdrawUsdcAddress || parseFloat(withdrawUsdcAmount) <= 0}
+              disabled={repaying || !withdrawUsdcAmount || !withdrawUsdcAddress || parseFloat(withdrawUsdcAmount) <= 0}
               className="w-full"
             >
-              {loading ? (
+              {repaying ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                   Processing...

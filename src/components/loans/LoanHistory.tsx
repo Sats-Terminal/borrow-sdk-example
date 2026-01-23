@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 
 export function LoanHistory() {
-  const { isConnected, transactions, loadTransactions, loading } = useBorrowSDK();
+  const { isConnected, transactions, loadTransactions, transactionsLoading } = useBorrowSDK();
   const [selectedLoan, setSelectedLoan] = useState<UserTransaction | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
 
@@ -43,20 +43,16 @@ export function LoanHistory() {
     const normalizedStatus = status?.toLowerCase() || '';
     switch (normalizedStatus) {
       case 'active':
-      case 'loan_confirmed':
-      case 'loan_active':
         return <Badge variant="success">Active</Badge>;
       case 'completed':
-        return <Badge variant="secondary">Completed</Badge>;
+      case 'repaid':
+      case 'closed':
+        return <Badge variant="secondary">Repaid</Badge>;
       case 'pending':
-      case 'initializing':
         return <Badge variant="warning">Pending</Badge>;
       case 'awaiting_deposit':
-      case 'awaiting_deposit_confirmation':
         return <Badge variant="warning">Awaiting Deposit</Badge>;
       case 'processing':
-      case 'preparing_borrow_deposit':
-      case 'preparing_loan':
         return <Badge variant="outline">Processing</Badge>;
       case 'failed':
         return <Badge variant="destructive">Failed</Badge>;
@@ -65,15 +61,16 @@ export function LoanHistory() {
     }
   };
 
+  // A loan is active if status is 'active' (after mapStatus normalization)
   const isLoanActive = (status: string) => {
     const normalizedStatus = status?.toLowerCase() || '';
-    return normalizedStatus === 'active' || normalizedStatus === 'loan_confirmed' || normalizedStatus === 'loan_active';
+    return normalizedStatus === 'active';
   };
 
+  // Loans that can be clicked for details/actions
   const isLoanClickable = (status: string) => {
     const normalizedStatus = status?.toLowerCase() || '';
-    return normalizedStatus === 'active' || normalizedStatus === 'loan_confirmed' ||
-           normalizedStatus === 'loan_active' || normalizedStatus === 'completed';
+    return normalizedStatus === 'active' || normalizedStatus === 'completed' || normalizedStatus === 'repaid';
   };
 
   const formatDate = (timestamp: number) => {
@@ -99,8 +96,8 @@ export function LoanHistory() {
               </div>
               Active Loans
             </h2>
-            <Button variant="outline" size="sm" onClick={loadTransactions} disabled={loading}>
-              {loading ? (
+            <Button variant="outline" size="sm" onClick={loadTransactions} disabled={transactionsLoading}>
+              {transactionsLoading ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
                 <RefreshCw className="h-4 w-4" />
@@ -177,8 +174,8 @@ export function LoanHistory() {
                 </CardDescription>
               </div>
             </div>
-            <Button variant="outline" size="sm" onClick={loadTransactions} disabled={loading}>
-              {loading ? (
+            <Button variant="outline" size="sm" onClick={loadTransactions} disabled={transactionsLoading}>
+              {transactionsLoading ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
                 <>

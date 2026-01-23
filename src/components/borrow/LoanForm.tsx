@@ -20,7 +20,7 @@ import { Loader2, Calculator, Bitcoin, Shield } from 'lucide-react';
 type ProtocolFilter = 'all' | 'aave' | 'morpho';
 
 export function LoanForm() {
-  const { isConnected, fetchQuotes, loading, error, protocolFilter, setProtocolFilter } = useBorrowSDK();
+  const { isConnected, fetchQuotes, quotesLoading, error, protocolFilter, setProtocolFilter } = useBorrowSDK();
   const { toast } = useToast();
 
   // Minimum 0.0001 BTC (10,000 sats) - bridge minimum
@@ -207,8 +207,8 @@ export function LoanForm() {
         )}
 
         {/* Get Quotes Button */}
-        <Button onClick={handleGetQuotes} disabled={loading} variant="accent" className="w-full h-12 uppercase tracking-wide font-semibold">
-          {loading ? (
+        <Button onClick={handleGetQuotes} disabled={quotesLoading} variant="accent" className="w-full h-12 uppercase tracking-wide font-semibold">
+          {quotesLoading ? (
             <>
               <Loader2 className="h-4 w-4 animate-spin" />
               Fetching Quotes...

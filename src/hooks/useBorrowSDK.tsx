@@ -9,7 +9,10 @@ import {
 import type * as BorrowSDKModule from '@satsterminal-sdk/borrow';
 
 // Map API status to user-friendly status
+// Note: "COMPLETED" from backend means borrow workflow completed (loan disbursed), not loan repaid
+// A loan is "active" until it's fully repaid. "REPAID" or "CLOSED" would indicate a finished loan.
 const mapStatus = (apiStatus: string): string => {
+  const normalizedStatus = apiStatus?.toUpperCase() || '';
   const statusMap: Record<string, string> = {
     'INITIALIZING': 'pending',
     'AWAITING_DEPOSIT': 'awaiting_deposit',
@@ -17,11 +20,29 @@ const mapStatus = (apiStatus: string): string => {
     'PREPARING_BORROW_DEPOSIT': 'processing',
     'PREPARING_LOAN': 'processing',
     'LOAN_CONFIRMED': 'active',
-    'COMPLETED': 'completed',
-    'FAILED': 'failed',
+    'COMPLETED': 'active', // Borrow workflow completed = loan is now active
     'LOAN_ACTIVE': 'active',
+    'ACTIVE': 'active',
+    'FAILED': 'failed',
+    // These would indicate a truly completed/closed loan
+    'REPAID': 'completed',
+    'CLOSED': 'completed',
+    'FULLY_REPAID': 'completed',
   };
-  return statusMap[apiStatus] || apiStatus.toLowerCase();
+  return statusMap[normalizedStatus] || apiStatus.toLowerCase();
+};
+
+// Extract the current status from transaction
+// Backend may provide status in transactionStatuses array (latest entry is current)
+const extractStatus = (tx: any): string => {
+  // First check transactionStatuses array - the last entry is the current status
+  const statuses = tx.transactionStatuses;
+  if (statuses && Array.isArray(statuses) && statuses.length > 0) {
+    const latestStatus = statuses[statuses.length - 1];
+    return latestStatus?.status || latestStatus || '';
+  }
+  // Fall back to direct status field
+  return tx.status || '';
 };
 
 // Transform API transaction to UserTransaction type
@@ -32,12 +53,24 @@ const transformTransaction = (tx: any): UserTransaction => {
   const collateralSats = Units.btcToSats(collateralBtc);
   const loanChainAddress = tx.loanChainAddress || '';
 
+  // Extract status from transactionStatuses array or direct status field
+  const rawStatus = extractStatus(tx);
+  const mappedStatus = mapStatus(rawStatus);
+
+  // Debug: log status transformation
+  console.debug('[transformTransaction] Status:', {
+    id: tx.transactionId || tx.id,
+    rawStatus,
+    mappedStatus,
+    transactionStatuses: tx.transactionStatuses?.slice(-3) // Last 3 statuses
+  });
+
   return {
     id: tx.transactionId || tx.id || '',
     type: 'borrow',
     amount: tx.loanAmount || tx.borrowAmount || '0',
     currency: tx.outputToken || 'USDC',
-    status: mapStatus(tx.status || '') as UserTransaction['status'],
+    status: mappedStatus as UserTransaction['status'],
     timestamp: tx.createdAt ? new Date(tx.createdAt).getTime() : Date.now(),
     txHash: tx.txHash || '',
     borrowTransaction: {
@@ -144,8 +177,14 @@ interface BorrowSDKContextType {
   workflowStatus: WorkflowStatus | null;
   depositInfo: DepositInfo | null;
 
-  // UI
-  loading: boolean;
+  // UI - Granular loading states
+  loading: boolean; // General loading (any operation in progress)
+  connectingWallet: boolean;
+  quotesLoading: boolean;
+  transactionsLoading: boolean;
+  borrowing: boolean;
+  repaying: boolean;
+  portfolioLoading: boolean;
   error: string | null;
 
   // Methods
@@ -210,9 +249,17 @@ export function BorrowSDKProvider({ children }: { children: ReactNode }) {
   const [workflowStatus, setWorkflowStatus] = useState<WorkflowStatus | null>(null);
   const [depositInfo, setDepositInfo] = useState<DepositInfo | null>(null);
 
-  // UI state
-  const [loading, setLoading] = useState(false);
+  // UI state - Granular loading states
+  const [connectingWallet, setConnectingWallet] = useState(false);
+  const [quotesLoading, setQuotesLoading] = useState(false);
+  const [transactionsLoading, setTransactionsLoading] = useState(false);
+  const [borrowing, setBorrowing] = useState(false);
+  const [repaying, setRepaying] = useState(false);
+  const [portfolioLoading, setPortfolioLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Computed general loading state for backward compatibility
+  const loading = connectingWallet || quotesLoading || transactionsLoading || borrowing || repaying || portfolioLoading;
 
   // Create SDK instance
   const sdk = useMemo(() => {
@@ -268,7 +315,7 @@ export function BorrowSDKProvider({ children }: { children: ReactNode }) {
 
   // Connect wallet
   const connect = useCallback(async (type: WalletType = 'unisat') => {
-    setLoading(true);
+    setConnectingWallet(true);
     setError(null);
     try {
       let address: string;
@@ -313,7 +360,7 @@ export function BorrowSDKProvider({ children }: { children: ReactNode }) {
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to connect');
     } finally {
-      setLoading(false);
+      setConnectingWallet(false);
     }
   }, []);
 
@@ -368,14 +415,16 @@ export function BorrowSDKProvider({ children }: { children: ReactNode }) {
   // Restore existing session (no new signature required if session is valid)
   const restoreSession = useCallback(async () => {
     if (!sdk) throw new Error('SDK not initialized');
-    setLoading(true);
+    setTransactionsLoading(true);
     setError(null);
     try {
       const restored = await sdk.restoreSession();
       if (restored) {
         setUserStatus(restored.userStatus);
         setSession(restored.activeSession);
-        const rawTxs = restored.transactions || [];
+        // Handle various response formats (cast to any for runtime flexibility)
+        const res = restored as any;
+        const rawTxs = res?.transactions || res?.data?.transactions || res?.additional?.transactions || [];
         setTransactions(rawTxs.map(transformTransaction));
         if (sdk.baseWalletAddress) {
           setBaseAddress(sdk.baseWalletAddress);
@@ -390,7 +439,7 @@ export function BorrowSDKProvider({ children }: { children: ReactNode }) {
       setError(err instanceof Error ? err.message : 'Restore failed');
       return null;
     } finally {
-      setLoading(false);
+      setTransactionsLoading(false);
     }
   }, [sdk]);
 
@@ -407,14 +456,16 @@ export function BorrowSDKProvider({ children }: { children: ReactNode }) {
       };
     }
 
-    setLoading(true);
+    setTransactionsLoading(true);
     setError(null);
     try {
       const restored = await sdk.restoreSession();
       if (restored) {
         setUserStatus(restored.userStatus);
         setSession(restored.activeSession);
-        const rawTxs = restored.transactions || [];
+        // Handle various response formats (cast to any for runtime flexibility)
+        const res = restored as any;
+        const rawTxs = res?.transactions || res?.data?.transactions || res?.additional?.transactions || [];
         setTransactions(rawTxs.map(transformTransaction));
         if (sdk.baseWalletAddress) {
           setBaseAddress(sdk.baseWalletAddress);
@@ -427,7 +478,9 @@ export function BorrowSDKProvider({ children }: { children: ReactNode }) {
       const result = await sdk.setupForLoan();
       setUserStatus(result.userStatus);
       setSession(result.activeSession);
-      const rawTxs = result.transactions || [];
+      // Handle various response formats (cast to any for runtime flexibility)
+      const res = result as any;
+      const rawTxs = res?.transactions || res?.data?.transactions || res?.additional?.transactions || [];
       setTransactions(rawTxs.map(transformTransaction));
       setBaseAddress(result.baseWallet.address);
       return result;
@@ -435,28 +488,33 @@ export function BorrowSDKProvider({ children }: { children: ReactNode }) {
       setError(err instanceof Error ? err.message : 'Setup failed');
       throw err;
     } finally {
-      setLoading(false);
+      setTransactionsLoading(false);
     }
   }, [sdk, session, userStatus, transactions]);
 
   // Load transactions
   const loadTransactions = useCallback(async () => {
     if (!sdk) return;
+    setTransactionsLoading(true);
     try {
       const history = await sdk.getUserTransactions(1, 50, 'all');
-      const rawTxs = history.transactions || [];
+      // Handle various response formats (cast to any for runtime flexibility)
+      const res = history as any;
+      const rawTxs = res?.transactions || res?.data?.transactions || res?.additional?.transactions || [];
       const transformedTxs = rawTxs.map(transformTransaction);
       console.log('[loadTransactions] Transformed transactions:', transformedTxs.slice(0, 2));
       setTransactions(transformedTxs);
     } catch (err) {
       console.error('Failed to load transactions:', err);
+    } finally {
+      setTransactionsLoading(false);
     }
   }, [sdk]);
 
   // Fetch quotes
   const fetchQuotes = useCallback(async (collateral: string, loanAmount: string, ltv: number) => {
     if (!sdk) throw new Error('SDK not initialized');
-    setLoading(true);
+    setQuotesLoading(true);
     setError(null);
     try {
       const collateralSatoshis = Units.btcToSats(collateral).toString();
@@ -480,14 +538,14 @@ export function BorrowSDKProvider({ children }: { children: ReactNode }) {
       setError(err instanceof Error ? err.message : 'Failed to fetch quotes');
       throw err;
     } finally {
-      setLoading(false);
+      setQuotesLoading(false);
     }
   }, [sdk]);
 
   // Execute borrow and automatically track workflow
   const borrow = useCallback(async (quote: Quote, destinationAddress?: string) => {
     if (!sdk) throw new Error('SDK not initialized');
-    setLoading(true);
+    setBorrowing(true);
     setError(null);
     setWorkflowStatus(null);
     setDepositInfo(null);
@@ -543,20 +601,20 @@ export function BorrowSDKProvider({ children }: { children: ReactNode }) {
         },
         onComplete: () => {
           console.log('[borrow] Workflow complete');
-          setLoading(false);
+          setBorrowing(false);
           loadTransactions();
         },
         onError: (err: string) => {
           console.error('[borrow] Workflow error:', err);
           setError(err);
-          setLoading(false);
+          setBorrowing(false);
         }
       });
 
       return workflowId;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Borrow failed');
-      setLoading(false);
+      setBorrowing(false);
       throw err;
     }
   }, [sdk, loadTransactions]);
@@ -570,7 +628,7 @@ export function BorrowSDKProvider({ children }: { children: ReactNode }) {
   // Resume loan
   const resumeLoan = useCallback(async (workflowId: string) => {
     if (!sdk) throw new Error('SDK not initialized');
-    setLoading(true);
+    setBorrowing(true);
     setError(null);
     setWorkflowStatus(null);
     setDepositInfo(null);
@@ -578,19 +636,19 @@ export function BorrowSDKProvider({ children }: { children: ReactNode }) {
       await sdk.resumeLoan(workflowId, {
         onStatusUpdate: (status: SDKWorkflowStatus) => setWorkflowStatus(status as WorkflowStatus),
         onDepositReady: (info: DepositInfo) => setDepositInfo(info),
-        onComplete: () => { setLoading(false); loadTransactions(); },
-        onError: (err: string) => { setError(err); setLoading(false); }
+        onComplete: () => { setBorrowing(false); loadTransactions(); },
+        onError: (err: string) => { setError(err); setBorrowing(false); }
       });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to resume');
-      setLoading(false);
+      setBorrowing(false);
     }
   }, [sdk, loadTransactions]);
 
   // Start new loan
   const startNewLoan = useCallback(async () => {
     if (!sdk) throw new Error('SDK not initialized');
-    setLoading(true);
+    setBorrowing(true);
     setError(null);
     try {
       const result = await sdk.startNewLoan();
@@ -602,7 +660,7 @@ export function BorrowSDKProvider({ children }: { children: ReactNode }) {
       setError(err instanceof Error ? err.message : 'Failed to start new loan');
       throw err;
     } finally {
-      setLoading(false);
+      setBorrowing(false);
     }
   }, [sdk]);
 
@@ -613,7 +671,7 @@ export function BorrowSDKProvider({ children }: { children: ReactNode }) {
     options?: any
   ) => {
     if (!sdk) throw new Error('SDK not initialized');
-    setLoading(true);
+    setRepaying(true);
     setError(null);
     try {
       // Use ensureBaseWalletWithSignature() which only sets up base wallet
@@ -657,7 +715,7 @@ export function BorrowSDKProvider({ children }: { children: ReactNode }) {
       setError(err instanceof Error ? err.message : 'Repay failed');
       throw err;
     } finally {
-      setLoading(false);
+      setRepaying(false);
     }
   }, [sdk, loadTransactions, transactions]);
 
@@ -681,18 +739,18 @@ export function BorrowSDKProvider({ children }: { children: ReactNode }) {
   // Resume repay workflow
   const resumeRepayWorkflow = useCallback(async (transactionId: string) => {
     if (!sdk) throw new Error('SDK not initialized');
-    setLoading(true);
+    setRepaying(true);
     setError(null);
     setWorkflowStatus(null);
     try {
       await sdk.trackWorkflow(transactionId, {
         onStatusUpdate: (status: SDKWorkflowStatus) => setWorkflowStatus(status as WorkflowStatus),
-        onComplete: () => { setLoading(false); loadTransactions(); },
-        onError: (err: string) => { setError(err); setLoading(false); }
+        onComplete: () => { setRepaying(false); loadTransactions(); },
+        onError: (err: string) => { setError(err); setRepaying(false); }
       }, 'repay');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to resume');
-      setLoading(false);
+      setRepaying(false);
     }
   }, [sdk, loadTransactions]);
 
@@ -736,29 +794,37 @@ export function BorrowSDKProvider({ children }: { children: ReactNode }) {
   // Get wallet portfolio
   const getWalletPortfolio = useCallback(async () => {
     if (!sdk) return;
+    setPortfolioLoading(true);
     try {
       const result = await sdk.getWalletPortfolio();
-      setWalletPortfolio(result.data);
+      // Handle both { data: WalletPortfolio } and direct WalletPortfolio
+      const portfolio = result?.data || result;
+      setWalletPortfolio(portfolio);
     } catch (err) {
       console.error('[getWalletPortfolio] Error:', err);
+    } finally {
+      setPortfolioLoading(false);
     }
   }, [sdk]);
 
   // Get wallet positions
   const getWalletPositions = useCallback(async () => {
     if (!sdk) return;
+    setPortfolioLoading(true);
     try {
       const result = await sdk.getWalletPositions();
       setWalletPositions(result);
     } catch (err) {
       console.error('[getWalletPositions] Error:', err);
+    } finally {
+      setPortfolioLoading(false);
     }
   }, [sdk]);
 
   // Withdraw collateral
   const withdrawCollateral = useCallback(async (loanId: string, amount: string, address: string) => {
     if (!sdk) throw new Error('SDK not initialized');
-    setLoading(true);
+    setRepaying(true); // Use repaying state for withdraw operations
     setError(null);
     try {
       // Use ensureBaseWalletWithSignature() which only sets up base wallet
@@ -792,7 +858,7 @@ export function BorrowSDKProvider({ children }: { children: ReactNode }) {
       setError(err instanceof Error ? err.message : 'Withdraw failed');
       throw err;
     } finally {
-      setLoading(false);
+      setRepaying(false);
     }
   }, [sdk, transactions, loadTransactions]);
 
@@ -855,8 +921,14 @@ export function BorrowSDKProvider({ children }: { children: ReactNode }) {
     workflowStatus,
     depositInfo,
 
-    // UI
+    // UI - Granular loading states
     loading,
+    connectingWallet,
+    quotesLoading,
+    transactionsLoading,
+    borrowing,
+    repaying,
+    portfolioLoading,
     error,
 
     // Methods

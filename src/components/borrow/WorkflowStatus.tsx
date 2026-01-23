@@ -8,10 +8,10 @@ import { CheckCircle2, Clock, AlertTriangle, Loader2, Copy } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast';
 
 export function WorkflowStatus() {
-  const { workflowStatus, depositInfo, loading, error } = useBorrowSDK();
+  const { workflowStatus, depositInfo, borrowing, error } = useBorrowSDK();
   const { toast } = useToast();
 
-  if (!workflowStatus && !depositInfo && !loading) {
+  if (!workflowStatus && !depositInfo && !borrowing) {
     return null;
   }
 
@@ -30,7 +30,7 @@ export function WorkflowStatus() {
     if (workflowStatus?.isComplete) {
       return <CheckCircle2 className="h-5 w-5 text-green-500" />;
     }
-    if (loading) {
+    if (borrowing) {
       return <Loader2 className="h-5 w-5 animate-spin text-primary" />;
     }
     return <Clock className="h-5 w-5 text-yellow-500" />;
@@ -132,7 +132,7 @@ export function WorkflowStatus() {
         )}
 
         {/* Loading State */}
-        {loading && !workflowStatus && (
+        {borrowing && !workflowStatus && (
           <div className="flex items-center justify-center py-8">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
             <span className="ml-2 text-muted-foreground">Processing workflow...</span>

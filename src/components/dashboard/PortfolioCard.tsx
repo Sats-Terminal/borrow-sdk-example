@@ -5,7 +5,7 @@ import { useBorrowSDK } from '@/hooks/useBorrowSDK';
 import { RefreshCw, Loader2, TrendingUp, TrendingDown } from 'lucide-react';
 
 export function PortfolioCard() {
-  const { isConnected, walletPortfolio, getWalletPortfolio, loading } = useBorrowSDK();
+  const { isConnected, walletPortfolio, getWalletPortfolio, portfolioLoading } = useBorrowSDK();
 
   useEffect(() => {
     if (isConnected) {
@@ -24,12 +24,14 @@ export function PortfolioCard() {
     );
   }
 
-  const totalValue = walletPortfolio?.attributes?.total?.positions || 0;
-  const change1d = walletPortfolio?.attributes?.changes?.absolute_1d || 0;
-  const changePercent1d = walletPortfolio?.attributes?.changes?.percent_1d || 0;
+  // Handle both direct walletPortfolio.attributes and nested walletPortfolio.data.attributes
+  const portfolioData = walletPortfolio?.attributes ? walletPortfolio : walletPortfolio?.data;
+  const totalValue = portfolioData?.attributes?.total?.positions ?? 0;
+  const change1d = portfolioData?.attributes?.changes?.absolute_1d ?? 0;
+  const changePercent1d = portfolioData?.attributes?.changes?.percent_1d ?? 0;
   const isPositive = change1d >= 0;
 
-  const chainDistribution = walletPortfolio?.attributes?.positions_distribution_by_chain || {};
+  const chainDistribution = portfolioData?.attributes?.positions_distribution_by_chain ?? {};
 
   return (
     <Card>
@@ -39,8 +41,8 @@ export function PortfolioCard() {
             <CardTitle>Portfolio</CardTitle>
             <CardDescription>Your wallet holdings overview</CardDescription>
           </div>
-          <Button variant="ghost" size="sm" onClick={() => getWalletPortfolio()} disabled={loading}>
-            {loading ? (
+          <Button variant="ghost" size="sm" onClick={() => getWalletPortfolio()} disabled={portfolioLoading}>
+            {portfolioLoading ? (
               <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
               <RefreshCw className="h-4 w-4" />
@@ -94,7 +96,7 @@ export function PortfolioCard() {
           </div>
         )}
 
-        {!walletPortfolio && !loading && (
+        {!walletPortfolio && !portfolioLoading && (
           <p className="text-sm text-muted-foreground text-center py-4">
             No portfolio data available
           </p>

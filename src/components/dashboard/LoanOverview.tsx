@@ -13,7 +13,7 @@ export function LoanOverview() {
     session,
     baseAddress,
     transactions,
-    loading,
+    transactionsLoading,
     error,
     setupForLoan,
     restoreSession,
@@ -76,7 +76,7 @@ export function LoanOverview() {
   const healthFactor = activeLoans.length > 0 ? 1.85 : 0;
   const healthColor = healthFactor > 1.5 ? 'text-green-500' : healthFactor > 1.2 ? 'text-yellow-500' : 'text-red-500';
 
-  if ((loading || isRetrying) && !userStatus) {
+  if ((transactionsLoading || isRetrying) && !userStatus) {
     return (
       <Card>
         <CardContent className="flex items-center justify-center py-12">
@@ -114,7 +114,7 @@ export function LoanOverview() {
   }
 
   // Show setup prompt if not yet initialized
-  if (!session && !loading && !isRetrying) {
+  if (!session && !transactionsLoading && !isRetrying) {
     return (
       <Card>
         <CardContent className="py-12 text-center">
@@ -123,8 +123,8 @@ export function LoanOverview() {
           <p className="text-muted-foreground mb-4">
             Initialize your smart account to start borrowing. This requires a one-time signature.
           </p>
-          <Button onClick={handleSetup} disabled={loading}>
-            {loading ? (
+          <Button onClick={handleSetup} disabled={transactionsLoading}>
+            {transactionsLoading ? (
               <>
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                 Setting up...

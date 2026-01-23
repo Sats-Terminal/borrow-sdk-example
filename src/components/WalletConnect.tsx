@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Wallet, LogOut, Loader2 } from 'lucide-react';
 
 export function WalletConnect() {
-  const { isConnected, btcAddress, walletType, loading, connect, disconnect } = useBorrowSDK();
+  const { isConnected, btcAddress, walletType, connectingWallet, connect, disconnect } = useBorrowSDK();
 
   if (isConnected) {
     return (
@@ -28,11 +28,11 @@ export function WalletConnect() {
 
   return (
     <div className="flex gap-2">
-      <Button onClick={() => connect('unisat')} disabled={loading} variant="accent" className="font-semibold">
-        {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'UniSat'}
+      <Button onClick={() => connect('unisat')} disabled={connectingWallet} variant="accent" className="font-semibold">
+        {connectingWallet ? <Loader2 className="h-4 w-4 animate-spin" /> : 'UniSat'}
       </Button>
-      <Button variant="outline" onClick={() => connect('xverse')} disabled={loading} className="font-semibold">
-        {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Xverse'}
+      <Button variant="outline" onClick={() => connect('xverse')} disabled={connectingWallet} className="font-semibold">
+        {connectingWallet ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Xverse'}
       </Button>
     </div>
   );

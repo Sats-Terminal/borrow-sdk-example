@@ -7,7 +7,7 @@ import { useBorrowSDK } from '@/hooks/useBorrowSDK';
 import { RefreshCw, Loader2, Coins } from 'lucide-react';
 
 export function PositionsList() {
-  const { isConnected, walletPositions, getWalletPositions, loading } = useBorrowSDK();
+  const { isConnected, walletPositions, getWalletPositions, portfolioLoading } = useBorrowSDK();
 
   useEffect(() => {
     if (isConnected) {
@@ -15,7 +15,10 @@ export function PositionsList() {
     }
   }, [isConnected, getWalletPositions]);
 
-  const positions = walletPositions?.data || [];
+  // Handle both array and wrapped { data: [...] } response
+  const positions = Array.isArray(walletPositions)
+    ? walletPositions
+    : (walletPositions?.data ?? []);
 
   if (!isConnected) {
     return (
@@ -36,8 +39,8 @@ export function PositionsList() {
             <CardTitle>Positions</CardTitle>
             <CardDescription>Your token holdings</CardDescription>
           </div>
-          <Button variant="ghost" size="sm" onClick={() => getWalletPositions()} disabled={loading}>
-            {loading ? (
+          <Button variant="ghost" size="sm" onClick={() => getWalletPositions()} disabled={portfolioLoading}>
+            {portfolioLoading ? (
               <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
               <RefreshCw className="h-4 w-4" />

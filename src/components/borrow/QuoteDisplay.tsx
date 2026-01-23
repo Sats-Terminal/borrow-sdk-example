@@ -9,7 +9,7 @@ import { Loader2, ArrowRight, Percent, Shield, Zap, Bitcoin, DollarSign, Link } 
 import type { Quote } from '@satsterminal-sdk/borrow';
 
 export function QuoteDisplay() {
-  const { filteredQuotes, borrow, loading, baseAddress, protocolFilter } = useBorrowSDK();
+  const { filteredQuotes, borrow, borrowing, baseAddress, protocolFilter } = useBorrowSDK();
   const { toast } = useToast();
   const [selectedQuote, setSelectedQuote] = useState<Quote | null>(null);
 
@@ -158,11 +158,11 @@ export function QuoteDisplay() {
 
               <Button
                 onClick={() => handleBorrow(quote)}
-                disabled={loading && selectedQuote === quote}
+                disabled={borrowing && selectedQuote === quote}
                 variant={index === 0 ? "accent" : "outline"}
                 className="w-full h-11 uppercase tracking-wide font-semibold"
               >
-                {loading && selectedQuote === quote ? (
+                {borrowing && selectedQuote === quote ? (
                   <>
                     <Loader2 className="h-4 w-4 animate-spin" />
                     Processing...
