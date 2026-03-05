@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Separator } from '@/components/ui/separator';
 import { useBorrowSDK } from '@/hooks/useBorrowSDK';
+import { useBtcPrice } from '@/hooks/useBtcPrice';
 import { useToast } from '@/hooks/use-toast';
 import type { UserTransaction } from '@satsterminal-sdk/borrow';
 import { Units } from '@satsterminal-sdk/borrow';
@@ -30,6 +31,7 @@ export function LoanDetailsDialog({ open, onOpenChange, loan, onActionComplete }
     btcAddress, baseAddress, repaying, getLoanCollateralInfo
   } = useBorrowSDK();
   const { toast } = useToast();
+  const btcPrice = useBtcPrice();
 
   // Loan info state
   const [collateralInfo, setCollateralInfo] = useState<{
@@ -68,7 +70,14 @@ export function LoanDetailsDialog({ open, onOpenChange, loan, onActionComplete }
             setRepayAmount(info.remainingDebt);
           }
         })
-        .catch(err => console.error('Failed to load collateral info:', err))
+        .catch(err => {
+          console.error('Failed to load collateral info:', err);
+          toast({
+            title: 'Failed to Load Loan Info',
+            description: 'Could not retrieve collateral details. Please try again.',
+            variant: 'destructive',
+          });
+        })
         .finally(() => setLoadingInfo(false));
 
       // Reset form states
@@ -102,10 +111,10 @@ export function LoanDetailsDialog({ open, onOpenChange, loan, onActionComplete }
   const maxWithdrawableBtc = collateralInfo ? parseCollateralValue(collateralInfo.maxWithdrawable) : 0;
   const remainingDebt = collateralInfo ? parseFloat(collateralInfo.remainingDebt) : loanAmount;
 
-  // Calculate health factor (simplified)
-  const btcPrice = 95000;
-  const collateralValue = totalCollateralBtc * btcPrice;
-  const healthFactor = remainingDebt > 0 ? collateralValue / remainingDebt : 0;
+  // Calculate health factor using Aave-style formula with 0.8 liquidation threshold
+  const price = btcPrice ?? 0;
+  const collateralValue = totalCollateralBtc * price;
+  const healthFactor = remainingDebt > 0 ? (collateralValue * 0.8) / remainingDebt : 0;
   const healthColor = healthFactor > 1.5 ? 'text-green-500' : healthFactor > 1.2 ? 'text-yellow-500' : 'text-red-500';
 
   const isFullRepayment = parseFloat(repayAmount) >= remainingDebt;
@@ -509,7 +518,7 @@ export function LoanDetailsDialog({ open, onOpenChange, loan, onActionComplete }
 
             <Button
               onClick={handleWithdrawCollateral}
-              disabled={repaying || !withdrawBtcAmount || !withdrawBtcAddress || parseFloat(withdrawBtcAmount) <= 0}
+              disabled={repaying || !withdrawBtcAmount || !withdrawBtcAddress || parseFloat(withdrawBtcAmount) <= 0 || parseFloat(withdrawBtcAmount) > maxWithdrawableBtc}
               variant="accent"
               className="w-full h-10"
             >
@@ -532,7 +541,7 @@ export function LoanDetailsDialog({ open, onOpenChange, loan, onActionComplete }
             <div className="p-3 bg-zinc-50 rounded-xl border-[0.5px] flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Transfer USDC from Base Wallet</p>
-                <p className="text-xl font-semibold font-mono">${loanAmount.toLocaleString()}</p>
+                <p className="text-xs text-muted-foreground">Up to ${loanAmount.toLocaleString()} USDC (original loan)</p>
               </div>
               <Badge variant="success" className="gap-1">
                 <Zap className="h-3 w-3" />

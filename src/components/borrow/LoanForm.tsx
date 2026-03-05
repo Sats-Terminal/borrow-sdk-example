@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,6 +13,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useBorrowSDK } from '@/hooks/useBorrowSDK';
+import { useBtcPrice } from '@/hooks/useBtcPrice';
 import { useToast } from '@/hooks/use-toast';
 import { Units } from '@satsterminal-sdk/borrow';
 import { Loader2, Bitcoin, ChevronRight } from 'lucide-react';
@@ -20,20 +21,33 @@ import { Loader2, Bitcoin, ChevronRight } from 'lucide-react';
 type ProtocolFilter = 'all' | 'aave' | 'morpho';
 
 export function LoanForm() {
-  const { isConnected, fetchQuotes, quotesLoading, error, protocolFilter, setProtocolFilter } = useBorrowSDK();
+  const { isConnected, fetchQuotes, quotesLoading, filteredQuotes, error, protocolFilter, setProtocolFilter } = useBorrowSDK();
   const { toast } = useToast();
+  const btcPrice = useBtcPrice();
 
   const [collateral, setCollateral] = useState('0.01');
   const [ltv, setLtv] = useState(50);
-  const [btcPrice, setBtcPrice] = useState<number | null>(null);
   const MIN_COLLATERAL_BTC = 0.0001;
 
   const collateralValue = btcPrice ? parseFloat(collateral) * btcPrice : 0;
   const estimatedLoan = collateralValue * (ltv / 100);
 
+  // Store latest fetch params for auto-refresh
+  const lastFetchParams = useRef<{ collateral: string; loanAmount: string; ltv: number } | null>(null);
+
+  // Auto-refresh quotes every 30 seconds when quotes are displayed
   useEffect(() => {
-    setBtcPrice(95000);
-  }, []);
+    if (!filteredQuotes || filteredQuotes.length === 0) return;
+
+    const interval = setInterval(() => {
+      if (lastFetchParams.current) {
+        const { collateral: c, loanAmount, ltv: l } = lastFetchParams.current;
+        fetchQuotes(c, loanAmount, l).catch(() => {});
+      }
+    }, 30000);
+
+    return () => clearInterval(interval);
+  }, [filteredQuotes, fetchQuotes]);
 
   const handleGetQuotes = async () => {
     if (!isConnected) {
@@ -65,6 +79,7 @@ export function LoanForm() {
     }
 
     try {
+      lastFetchParams.current = { collateral, loanAmount: estimatedLoan.toFixed(2), ltv };
       await fetchQuotes(collateral, estimatedLoan.toFixed(2), ltv);
     } catch (err) {
       toast({

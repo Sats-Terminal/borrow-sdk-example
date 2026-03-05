@@ -506,6 +506,7 @@ export function BorrowSDKProvider({ children }: { children: ReactNode }) {
       setTransactions(transformedTxs);
     } catch (err) {
       console.error('Failed to load transactions:', err);
+      setError(err instanceof Error ? err.message : 'Failed to load transactions');
     } finally {
       setTransactionsLoading(false);
     }

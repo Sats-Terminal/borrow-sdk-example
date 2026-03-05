@@ -7,8 +7,8 @@ export function LoanSummary() {
   const { transactions } = useBorrowSDK();
 
   const activeLoans = transactions.filter(t => t.status?.toLowerCase() === 'active');
-  const totalBorrowed = transactions.reduce((sum, t) => sum + parseFloat(t.amount || '0'), 0);
-  const totalCollateral = transactions.reduce((sum, t) => {
+  const totalBorrowed = activeLoans.reduce((sum, t) => sum + parseFloat(t.amount || '0'), 0);
+  const totalCollateral = activeLoans.reduce((sum, t) => {
     const collateral = t.borrowTransaction?.collateralAmount || '0';
     return sum + parseFloat(Units.normalizeToBtc(collateral));
   }, 0);

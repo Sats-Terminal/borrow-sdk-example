@@ -5,6 +5,8 @@ import { CheckCircle2, TrendingUp, Shield } from 'lucide-react';
 interface RepayCalculatorProps {
   repayAmount: number;
   remainingDebt: number;
+  currentCollateralBtc: number;
+  btcPrice: number;
   useCollateral?: boolean;
   collateralUsed?: number;
 }
@@ -12,6 +14,8 @@ interface RepayCalculatorProps {
 export function RepayCalculator({
   repayAmount,
   remainingDebt,
+  currentCollateralBtc,
+  btcPrice,
   useCollateral = false,
   collateralUsed = 0
 }: RepayCalculatorProps) {
@@ -19,12 +23,10 @@ export function RepayCalculator({
   const repaymentPercent = (repayAmount / remainingDebt) * 100;
   const isFullRepayment = repayAmount >= remainingDebt;
 
-  // Mock values for health factor calculation
-  const btcPrice = 95000;
-  const currentCollateral = 0.1; // BTC
-  const newCollateral = useCollateral ? currentCollateral - collateralUsed : currentCollateral;
-  const currentHealthFactor = (currentCollateral * btcPrice) / remainingDebt;
-  const newHealthFactor = newDebt > 0 ? (newCollateral * btcPrice) / newDebt : Infinity;
+  // Aave-style health factor with 0.8 liquidation threshold
+  const newCollateral = useCollateral ? currentCollateralBtc - collateralUsed : currentCollateralBtc;
+  const currentHealthFactor = remainingDebt > 0 ? (currentCollateralBtc * btcPrice * 0.8) / remainingDebt : Infinity;
+  const newHealthFactor = newDebt > 0 ? (newCollateral * btcPrice * 0.8) / newDebt : Infinity;
 
   return (
     <Card className="bg-secondary/30">
@@ -69,11 +71,11 @@ export function RepayCalculator({
               Health Factor
             </span>
             <div className="text-right">
-              <span className={currentHealthFactor > 1.5 ? 'text-green-600' : 'text-yellow-600'}>
-                {currentHealthFactor.toFixed(2)}
+              <span className={currentHealthFactor === Infinity || currentHealthFactor > 1.5 ? 'text-green-600' : 'text-yellow-600'}>
+                {currentHealthFactor === Infinity ? '∞' : currentHealthFactor.toFixed(2)}
               </span>
               <span className="mx-1 text-muted-foreground">→</span>
-              <span className={newHealthFactor > 1.5 ? 'text-green-600' : newHealthFactor === Infinity ? 'text-green-600' : 'text-yellow-600'}>
+              <span className={newHealthFactor === Infinity || newHealthFactor > 1.5 ? 'text-green-600' : 'text-yellow-600'}>
                 {newHealthFactor === Infinity ? '∞' : newHealthFactor.toFixed(2)}
               </span>
             </div>

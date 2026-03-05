@@ -4,10 +4,11 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
 import { useBorrowSDK } from '@/hooks/useBorrowSDK';
+import { useBtcPrice } from '@/hooks/useBtcPrice';
 import { LoanActions } from './LoanActions';
 import type { UserTransaction, LoanCollateralInfo } from '@satsterminal-sdk/borrow';
 import { Units } from '@satsterminal-sdk/borrow';
-import { Bitcoin, DollarSign, Shield } from 'lucide-react';
+import { Bitcoin, DollarSign, Shield, CheckCircle2, Clock, Loader2, AlertCircle } from 'lucide-react';
 
 interface LoanCardProps {
   transaction: UserTransaction;
@@ -15,6 +16,7 @@ interface LoanCardProps {
 
 export function LoanCard({ transaction }: LoanCardProps) {
   const { getLoanCollateralInfo } = useBorrowSDK();
+  const btcPrice = useBtcPrice();
   const [collateralInfo, setCollateralInfo] = useState<LoanCollateralInfo | null>(null);
 
   useEffect(() => {
@@ -39,10 +41,10 @@ export function LoanCard({ transaction }: LoanCardProps) {
     ? parseFloat(collateralInfo.remainingDebt)
     : loanAmount;
 
-  // Calculate health factor (simplified)
-  const btcPrice = 95000; // Mock price
-  const collateralValue = totalCollateral * btcPrice;
-  const healthFactor = remainingDebt > 0 ? collateralValue / remainingDebt : 0;
+  // Calculate health factor using Aave-style formula with 0.8 liquidation threshold
+  const price = btcPrice ?? 0;
+  const collateralValue = totalCollateral * price;
+  const healthFactor = remainingDebt > 0 ? (collateralValue * 0.8) / remainingDebt : 0;
   const healthColor = healthFactor > 1.5 ? 'text-green-500' : healthFactor > 1.2 ? 'text-yellow-500' : 'text-red-500';
 
   // Repayment progress
@@ -67,7 +69,40 @@ export function LoanCard({ transaction }: LoanCardProps) {
               </p>
             </div>
           </div>
-          <Badge variant="success">Active</Badge>
+          {(() => {
+            const s = transaction.status?.toLowerCase() || '';
+            if (s === 'active') return (
+              <Badge variant="success" className="gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+                Active
+              </Badge>
+            );
+            if (s === 'completed' || s === 'repaid' || s === 'closed') return (
+              <Badge variant="secondary" className="gap-1">
+                <CheckCircle2 className="h-3 w-3" />
+                Repaid
+              </Badge>
+            );
+            if (s === 'pending' || s === 'awaiting_deposit') return (
+              <Badge variant="warning" className="gap-1">
+                <Clock className="h-3 w-3" />
+                Pending
+              </Badge>
+            );
+            if (s === 'processing') return (
+              <Badge variant="outline" className="gap-1">
+                <Loader2 className="h-3 w-3 animate-spin" />
+                Processing
+              </Badge>
+            );
+            if (s === 'failed') return (
+              <Badge variant="destructive" className="gap-1">
+                <AlertCircle className="h-3 w-3" />
+                Failed
+              </Badge>
+            );
+            return <Badge variant="outline">{transaction.status || 'Unknown'}</Badge>;
+          })()}
         </div>
       </CardHeader>
       <CardContent className="space-y-5">
@@ -80,7 +115,7 @@ export function LoanCard({ transaction }: LoanCardProps) {
             </div>
             <p className="font-semibold font-mono">{totalCollateral.toFixed(6)} BTC</p>
             <p className="text-xs text-muted-foreground mt-1">
-              ≈ ${(totalCollateral * btcPrice).toLocaleString()}
+              ≈ ${(totalCollateral * price).toLocaleString()}
             </p>
           </div>
 

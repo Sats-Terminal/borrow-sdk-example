@@ -96,7 +96,7 @@ export function QuoteDisplay() {
             {quotes.map((quote, index) => {
               const variableApy = parseFloat(quote.borrowApy?.variable || '0') || 0;
               const isBest = index === 0;
-              const isSelected = borrowing && selectedQuote === quote;
+              const isSelected = selectedQuote === quote;
 
               return (
                 <div
@@ -145,7 +145,7 @@ export function QuoteDisplay() {
                   {/* Action */}
                   <Button
                     onClick={() => handleBorrow(quote)}
-                    disabled={isSelected}
+                    disabled={borrowing}
                     variant={isBest ? "accent" : "secondary"}
                     className="w-full h-9"
                   >

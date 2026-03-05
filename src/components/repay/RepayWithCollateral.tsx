@@ -1,10 +1,12 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useBorrowSDK } from '@/hooks/useBorrowSDK';
+import { useBtcPrice } from '@/hooks/useBtcPrice';
 import { useToast } from '@/hooks/use-toast';
 import { RepayCalculator } from './RepayCalculator';
+import { Units } from '@satsterminal-sdk/borrow';
 import { Loader2, Bitcoin, AlertTriangle } from 'lucide-react';
 
 interface RepayWithCollateralProps {
@@ -14,14 +16,25 @@ interface RepayWithCollateralProps {
 }
 
 export function RepayWithCollateral({ loanId, remainingDebt, onSuccess }: RepayWithCollateralProps) {
-  const { repay, btcAddress, loading } = useBorrowSDK();
+  const { repay, repaying, btcAddress, getLoanCollateralInfo } = useBorrowSDK();
   const { toast } = useToast();
+  const btcPrice = useBtcPrice();
 
   const [repayAmount, setRepayAmount] = useState(remainingDebt.toString());
+  const [currentCollateralBtc, setCurrentCollateralBtc] = useState(0);
 
-  // Mock BTC price for calculation
-  const btcPrice = 95000;
-  const collateralNeeded = parseFloat(repayAmount) / btcPrice;
+  useEffect(() => {
+    getLoanCollateralInfo(loanId)
+      .then(info => {
+        if (info?.totalCollateral) {
+          setCurrentCollateralBtc(parseFloat(Units.normalizeToBtc(info.totalCollateral)));
+        }
+      })
+      .catch(err => console.error('[RepayWithCollateral] Failed to load collateral info:', err));
+  }, [loanId, getLoanCollateralInfo]);
+
+  const price = btcPrice ?? 0;
+  const collateralNeeded = price > 0 ? parseFloat(repayAmount) / price : 0;
 
   const handleRepay = async () => {
     try {
@@ -94,7 +107,7 @@ export function RepayWithCollateral({ loanId, remainingDebt, onSuccess }: RepayW
           </div>
           <div>
             <p className="text-muted-foreground">At Current Price</p>
-            <p className="font-semibold">${btcPrice.toLocaleString()}/BTC</p>
+            <p className="font-semibold">${price.toLocaleString()}/BTC</p>
           </div>
         </div>
         <p className="text-xs text-muted-foreground">
@@ -106,6 +119,8 @@ export function RepayWithCollateral({ loanId, remainingDebt, onSuccess }: RepayW
       <RepayCalculator
         repayAmount={parseFloat(repayAmount) || 0}
         remainingDebt={remainingDebt}
+        currentCollateralBtc={currentCollateralBtc}
+        btcPrice={price}
         useCollateral
         collateralUsed={collateralNeeded}
       />
@@ -113,10 +128,10 @@ export function RepayWithCollateral({ loanId, remainingDebt, onSuccess }: RepayW
       {/* Submit Button */}
       <Button
         onClick={handleRepay}
-        disabled={loading || !repayAmount || parseFloat(repayAmount) <= 0}
+        disabled={repaying || !repayAmount || parseFloat(repayAmount) <= 0}
         className="w-full"
       >
-        {loading ? (
+        {repaying ? (
           <>
             <Loader2 className="h-4 w-4 mr-2 animate-spin" />
             Processing...

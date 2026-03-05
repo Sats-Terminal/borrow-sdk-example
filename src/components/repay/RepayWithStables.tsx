@@ -1,10 +1,12 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useBorrowSDK } from '@/hooks/useBorrowSDK';
+import { useBtcPrice } from '@/hooks/useBtcPrice';
 import { useToast } from '@/hooks/use-toast';
 import { RepayCalculator } from './RepayCalculator';
+import { Units } from '@satsterminal-sdk/borrow';
 import { Loader2, DollarSign } from 'lucide-react';
 
 interface RepayWithStablesProps {
@@ -14,10 +16,22 @@ interface RepayWithStablesProps {
 }
 
 export function RepayWithStables({ loanId, remainingDebt, onSuccess }: RepayWithStablesProps) {
-  const { repay, loading } = useBorrowSDK();
+  const { repay, repaying, getLoanCollateralInfo } = useBorrowSDK();
   const { toast } = useToast();
+  const btcPrice = useBtcPrice();
 
   const [repayAmount, setRepayAmount] = useState(remainingDebt.toString());
+  const [currentCollateralBtc, setCurrentCollateralBtc] = useState(0);
+
+  useEffect(() => {
+    getLoanCollateralInfo(loanId)
+      .then(info => {
+        if (info?.totalCollateral) {
+          setCurrentCollateralBtc(parseFloat(Units.normalizeToBtc(info.totalCollateral)));
+        }
+      })
+      .catch(err => console.error('[RepayWithStables] Failed to load collateral info:', err));
+  }, [loanId, getLoanCollateralInfo]);
 
   const handleRepay = async () => {
     try {
@@ -78,15 +92,17 @@ export function RepayWithStables({ loanId, remainingDebt, onSuccess }: RepayWith
       <RepayCalculator
         repayAmount={parseFloat(repayAmount) || 0}
         remainingDebt={remainingDebt}
+        currentCollateralBtc={currentCollateralBtc}
+        btcPrice={btcPrice ?? 0}
       />
 
       {/* Submit Button */}
       <Button
         onClick={handleRepay}
-        disabled={loading || !repayAmount || parseFloat(repayAmount) <= 0}
+        disabled={repaying || !repayAmount || parseFloat(repayAmount) <= 0}
         className="w-full"
       >
-        {loading ? (
+        {repaying ? (
           <>
             <Loader2 className="h-4 w-4 mr-2 animate-spin" />
             Processing...
