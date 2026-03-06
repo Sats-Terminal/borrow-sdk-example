@@ -1,33 +1,41 @@
-import { useState, useCallback, useMemo, useEffect, createContext, useContext, ReactNode } from 'react';
+import {
+  useState,
+  useCallback,
+  useMemo,
+  useEffect,
+  createContext,
+  useContext,
+  ReactNode,
+} from "react";
 // Import SDK with clean named exports (ESM/CJS compatible)
 import {
   BorrowSDK,
   ChainType,
   Units,
   ResponseNormalizer,
-} from '@satsterminal-sdk/borrow';
-import type * as BorrowSDKModule from '@satsterminal-sdk/borrow';
+} from "@satsterminal-sdk/borrow";
+import type * as BorrowSDKModule from "@satsterminal-sdk/borrow";
 
 // Map API status to user-friendly status
 // Note: "COMPLETED" from backend means borrow workflow completed (loan disbursed), not loan repaid
 // A loan is "active" until it's fully repaid. "REPAID" or "CLOSED" would indicate a finished loan.
 const mapStatus = (apiStatus: string): string => {
-  const normalizedStatus = apiStatus?.toUpperCase() || '';
+  const normalizedStatus = apiStatus?.toUpperCase() || "";
   const statusMap: Record<string, string> = {
-    'INITIALIZING': 'pending',
-    'AWAITING_DEPOSIT': 'awaiting_deposit',
-    'AWAITING_DEPOSIT_CONFIRMATION': 'awaiting_deposit',
-    'PREPARING_BORROW_DEPOSIT': 'processing',
-    'PREPARING_LOAN': 'processing',
-    'LOAN_CONFIRMED': 'active',
-    'COMPLETED': 'active', // Borrow workflow completed = loan is now active
-    'LOAN_ACTIVE': 'active',
-    'ACTIVE': 'active',
-    'FAILED': 'failed',
+    INITIALIZING: "pending",
+    AWAITING_DEPOSIT: "awaiting_deposit",
+    AWAITING_DEPOSIT_CONFIRMATION: "awaiting_deposit",
+    PREPARING_BORROW_DEPOSIT: "processing",
+    PREPARING_LOAN: "processing",
+    LOAN_CONFIRMED: "active",
+    COMPLETED: "active", // Borrow workflow completed = loan is now active
+    LOAN_ACTIVE: "active",
+    ACTIVE: "active",
+    FAILED: "failed",
     // These would indicate a truly completed/closed loan
-    'REPAID': 'completed',
-    'CLOSED': 'completed',
-    'FULLY_REPAID': 'completed',
+    REPAID: "completed",
+    CLOSED: "completed",
+    FULLY_REPAID: "completed",
   };
   return statusMap[normalizedStatus] || apiStatus.toLowerCase();
 };
@@ -39,48 +47,48 @@ const extractStatus = (tx: any): string => {
   const statuses = tx.transactionStatuses;
   if (statuses && Array.isArray(statuses) && statuses.length > 0) {
     const latestStatus = statuses[statuses.length - 1];
-    return latestStatus?.status || latestStatus || '';
+    return latestStatus?.status || latestStatus || "";
   }
   // Fall back to direct status field
-  return tx.status || '';
+  return tx.status || "";
 };
 
 // Transform API transaction to UserTransaction type
 const transformTransaction = (tx: any): UserTransaction => {
   // Use Units.normalizeToBtc for clean conversion, then convert back to sats
-  const collateralRaw = tx.collateralAmount || tx.amountBTC || '0';
+  const collateralRaw = tx.collateralAmount || tx.amountBTC || "0";
   const collateralBtc = Units.normalizeToBtc(collateralRaw);
   const collateralSats = Units.btcToSats(collateralBtc);
-  const loanChainAddress = tx.loanChainAddress || '';
+  const loanChainAddress = tx.loanChainAddress || "";
 
   // Extract status from transactionStatuses array or direct status field
   const rawStatus = extractStatus(tx);
   const mappedStatus = mapStatus(rawStatus);
 
   // Debug: log status transformation
-  console.debug('[transformTransaction] Status:', {
+  console.debug("[transformTransaction] Status:", {
     id: tx.transactionId || tx.id,
     rawStatus,
     mappedStatus,
-    transactionStatuses: tx.transactionStatuses?.slice(-3) // Last 3 statuses
+    transactionStatuses: tx.transactionStatuses?.slice(-3), // Last 3 statuses
   });
 
   return {
-    id: tx.transactionId || tx.id || '',
-    type: 'borrow',
-    amount: tx.loanAmount || tx.borrowAmount || '0',
-    currency: tx.outputToken || 'USDC',
-    status: mappedStatus as UserTransaction['status'],
+    id: tx.transactionId || tx.id || "",
+    type: "borrow",
+    amount: tx.loanAmount || tx.borrowAmount || "0",
+    currency: tx.outputToken || "USDC",
+    status: mappedStatus as UserTransaction["status"],
     timestamp: tx.createdAt ? new Date(tx.createdAt).getTime() : Date.now(),
-    txHash: tx.txHash || '',
+    txHash: tx.txHash || "",
     borrowTransaction: {
-      protocol: tx.protocol || 'AAVE',
-      chain: tx.loanChain || 'BASE',
+      protocol: tx.protocol || "AAVE",
+      chain: tx.loanChain || "BASE",
       collateralAmount: collateralSats.toString(),
-      loanAmount: tx.loanAmount || tx.borrowAmount || '0',
+      loanAmount: tx.loanAmount || tx.borrowAmount || "0",
       loanChainAddress,
-      bitcoinAddress: tx.bitcoinAddress || '',
-      workflowId: tx.workflowId || '',
+      bitcoinAddress: tx.bitcoinAddress || "",
+      workflowId: tx.workflowId || "",
       transactionStatuses: tx.transactionStatuses || [],
     },
   };
@@ -94,11 +102,14 @@ type UserTransaction = BorrowSDKModule.UserTransaction;
 type RepayTransaction = BorrowSDKModule.RepayTransaction;
 type SDKWorkflowStatus = BorrowSDKModule.WorkflowStatus;
 import {
-  getAddress, signMessage, sendBtcTransaction,
-  AddressPurpose, BitcoinNetworkType
-} from 'sats-connect';
+  getAddress,
+  signMessage,
+  sendBtcTransaction,
+  AddressPurpose,
+  BitcoinNetworkType,
+} from "sats-connect";
 
-const API_KEY = import.meta.env.VITE_API_KEY || '';
+const API_KEY = import.meta.env.VITE_API_KEY || "";
 
 // Workflow status type
 interface WorkflowStatus {
@@ -142,8 +153,8 @@ declare global {
   }
 }
 
-export type WalletType = 'unisat' | 'xverse';
-export type ProtocolFilter = 'all' | 'aave' | 'morpho';
+export type WalletType = "unisat" | "xverse";
+export type ProtocolFilter = "all" | "aave" | "morpho";
 
 // Context type definition
 interface BorrowSDKContextType {
@@ -191,12 +202,20 @@ interface BorrowSDKContextType {
   restoreSession: () => Promise<any>;
   setupForLoan: () => Promise<any>;
   startNewLoan: () => Promise<any>;
-  fetchQuotes: (collateral: string, loanAmount: string, ltv: number) => Promise<any>;
+  fetchQuotes: (
+    collateral: string,
+    loanAmount: string,
+    ltv: number,
+  ) => Promise<any>;
   borrow: (quote: Quote, destinationAddress?: string) => Promise<string>;
   getStatus: (workflowId: string) => Promise<any>;
   resumeLoan: (workflowId: string) => Promise<void>;
   loadTransactions: () => Promise<void>;
-  repay: (originalBorrowId: string, repayAmount: string, options?: any) => Promise<string>;
+  repay: (
+    originalBorrowId: string,
+    repayAmount: string,
+    options?: any,
+  ) => Promise<string>;
   getRepayStatus: (transactionId: string) => Promise<any>;
   loadRepayTransactions: (loanId?: string) => Promise<void>;
   resumeRepayWorkflow: (transactionId: string) => Promise<void>;
@@ -206,9 +225,22 @@ interface BorrowSDKContextType {
   getWalletPortfolio: () => Promise<void>;
   getWalletPositions: () => Promise<void>;
   // Withdraw methods
-  withdrawCollateral: (loanId: string, amount: string, address: string) => Promise<string>;
-  withdrawToEVM: (chain: any, amount: string, destinationAddress: string) => Promise<string>;
-  withdrawToBitcoin: (chain: any, amount: string, assetSymbol: string, btcAddress: string) => Promise<string>;
+  withdrawCollateral: (
+    loanId: string,
+    amount: string,
+    address: string,
+  ) => Promise<string>;
+  withdrawToEVM: (
+    chain: any,
+    amount: string,
+    destinationAddress: string,
+  ) => Promise<string>;
+  withdrawToBitcoin: (
+    chain: any,
+    amount: string,
+    assetSymbol: string,
+    btcAddress: string,
+  ) => Promise<string>;
   getWithdrawStatus: (transactionId: string) => Promise<any>;
 }
 
@@ -230,15 +262,17 @@ export function BorrowSDKProvider({ children }: { children: ReactNode }) {
   // Loan state
   const [quotes, setQuotes] = useState<Quote[]>([]);
   const [transactions, setTransactions] = useState<UserTransaction[]>([]);
-  const [repayTransactions, setRepayTransactions] = useState<RepayTransaction[]>([]);
+  const [repayTransactions, setRepayTransactions] = useState<
+    RepayTransaction[]
+  >([]);
 
   // Protocol filter state
-  const [protocolFilter, setProtocolFilter] = useState<ProtocolFilter>('all');
+  const [protocolFilter, setProtocolFilter] = useState<ProtocolFilter>("all");
 
   // Filtered quotes based on protocol selection
   const filteredQuotes = useMemo(() => {
-    if (protocolFilter === 'all') return quotes;
-    return quotes.filter(q => q.protocol.toLowerCase() === protocolFilter);
+    if (protocolFilter === "all") return quotes;
+    return quotes.filter((q) => q.protocol.toLowerCase() === protocolFilter);
   }, [quotes, protocolFilter]);
 
   // Wallet data state
@@ -246,7 +280,9 @@ export function BorrowSDKProvider({ children }: { children: ReactNode }) {
   const [walletPositions, setWalletPositions] = useState<any>(null);
 
   // Workflow state
-  const [workflowStatus, setWorkflowStatus] = useState<WorkflowStatus | null>(null);
+  const [workflowStatus, setWorkflowStatus] = useState<WorkflowStatus | null>(
+    null,
+  );
   const [depositInfo, setDepositInfo] = useState<DepositInfo | null>(null);
 
   // UI state - Granular loading states
@@ -259,7 +295,13 @@ export function BorrowSDKProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState<string | null>(null);
 
   // Computed general loading state for backward compatibility
-  const loading = connectingWallet || quotesLoading || transactionsLoading || borrowing || repaying || portfolioLoading;
+  const loading =
+    connectingWallet ||
+    quotesLoading ||
+    transactionsLoading ||
+    borrowing ||
+    repaying ||
+    portfolioLoading;
 
   // Create SDK instance
   const sdk = useMemo(() => {
@@ -272,83 +314,93 @@ export function BorrowSDKProvider({ children }: { children: ReactNode }) {
         address: btcAddress,
         publicKey: publicKey || undefined,
         signMessage: async (msg: string) => {
-          if (walletType === 'unisat') {
-            if (!window.unisat) throw new Error('UniSat not available');
-            return window.unisat.signMessage(msg, 'ecdsa');
-          } else if (walletType === 'xverse') {
+          if (walletType === "unisat") {
+            if (!window.unisat) throw new Error("UniSat not available");
+            return window.unisat.signMessage(msg, "ecdsa");
+          } else if (walletType === "xverse") {
             return new Promise<string>((resolve, reject) => {
               signMessage({
                 payload: {
                   address: btcAddress!,
                   message: msg,
-                  network: { type: BitcoinNetworkType.Mainnet }
+                  network: { type: BitcoinNetworkType.Mainnet },
                 },
                 onFinish: (signature) => resolve(signature),
-                onCancel: () => reject(new Error('User cancelled'))
+                onCancel: () => reject(new Error("User cancelled")),
               });
             });
           }
-          throw new Error('Wallet not available');
+          throw new Error("Wallet not available");
         },
         sendBitcoin: async (toAddress: string, satoshis: number) => {
-          if (walletType === 'unisat') {
-            if (!window.unisat) throw new Error('UniSat not available');
+          if (walletType === "unisat") {
+            if (!window.unisat) throw new Error("UniSat not available");
             return window.unisat.sendBitcoin(toAddress, satoshis);
-          } else if (walletType === 'xverse') {
+          } else if (walletType === "xverse") {
             return new Promise<string>((resolve, reject) => {
               sendBtcTransaction({
                 payload: {
-                  recipients: [{ address: toAddress, amountSats: BigInt(satoshis) }],
+                  recipients: [
+                    { address: toAddress, amountSats: BigInt(satoshis) },
+                  ],
                   senderAddress: btcAddress!,
-                  network: { type: BitcoinNetworkType.Mainnet }
+                  network: { type: BitcoinNetworkType.Mainnet },
                 },
                 onFinish: (response) => resolve(response),
-                onCancel: () => reject(new Error('User cancelled'))
+                onCancel: () => reject(new Error("User cancelled")),
               });
             });
           }
-          throw new Error('Wallet not available');
-        }
-      }
+          throw new Error("Wallet not available");
+        },
+      },
     });
   }, [btcAddress, publicKey, walletType]);
 
   // Connect wallet
-  const connect = useCallback(async (type: WalletType = 'unisat') => {
+  const connect = useCallback(async (type: WalletType = "unisat") => {
     setConnectingWallet(true);
     setError(null);
     try {
       let address: string;
       let pubKey: string;
 
-      if (type === 'unisat') {
-        if (!window.unisat) throw new Error('UniSat wallet not installed');
+      if (type === "unisat") {
+        if (!window.unisat) throw new Error("UniSat wallet not installed");
         const accounts = await window.unisat.requestAccounts();
-        if (accounts.length === 0) throw new Error('No accounts');
+        if (accounts.length === 0) throw new Error("No accounts");
         address = accounts[0];
         pubKey = await window.unisat.getPublicKey();
-      } else if (type === 'xverse') {
-        const result = await new Promise<{ address: string; pubKey: string }>((resolve, reject) => {
-          getAddress({
-            payload: {
-              purposes: [AddressPurpose.Payment, AddressPurpose.Ordinals],
-              message: 'Connect your Xverse Wallet',
-              network: { type: BitcoinNetworkType.Mainnet }
-            },
-            onFinish: (response) => {
-              const paymentAddr = response.addresses.find(a => a.purpose === AddressPurpose.Payment);
-              resolve({
-                address: paymentAddr?.address || response.addresses[0].address,
-                pubKey: paymentAddr?.publicKey || response.addresses[0].publicKey || ''
-              });
-            },
-            onCancel: () => reject(new Error('User cancelled'))
-          });
-        });
+      } else if (type === "xverse") {
+        const result = await new Promise<{ address: string; pubKey: string }>(
+          (resolve, reject) => {
+            getAddress({
+              payload: {
+                purposes: [AddressPurpose.Payment, AddressPurpose.Ordinals],
+                message: "Connect your Xverse Wallet",
+                network: { type: BitcoinNetworkType.Mainnet },
+              },
+              onFinish: (response) => {
+                const paymentAddr = response.addresses.find(
+                  (a) => a.purpose === AddressPurpose.Payment,
+                );
+                resolve({
+                  address:
+                    paymentAddr?.address || response.addresses[0].address,
+                  pubKey:
+                    paymentAddr?.publicKey ||
+                    response.addresses[0].publicKey ||
+                    "",
+                });
+              },
+              onCancel: () => reject(new Error("User cancelled")),
+            });
+          },
+        );
         address = result.address;
         pubKey = result.pubKey;
       } else {
-        throw new Error('Invalid wallet type');
+        throw new Error("Invalid wallet type");
       }
 
       setBtcAddress(address);
@@ -356,9 +408,12 @@ export function BorrowSDKProvider({ children }: { children: ReactNode }) {
       setWalletType(type);
 
       // Save to localStorage
-      localStorage.setItem('borrow_sdk_connection', JSON.stringify({ address, pubKey, type }));
+      localStorage.setItem(
+        "borrow_sdk_connection",
+        JSON.stringify({ address, pubKey, type }),
+      );
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to connect');
+      setError(err instanceof Error ? err.message : "Failed to connect");
     } finally {
       setConnectingWallet(false);
     }
@@ -366,7 +421,7 @@ export function BorrowSDKProvider({ children }: { children: ReactNode }) {
 
   // Restore connection on mount
   useEffect(() => {
-    const stored = localStorage.getItem('borrow_sdk_connection');
+    const stored = localStorage.getItem("borrow_sdk_connection");
     if (stored) {
       try {
         const { address, pubKey, type } = JSON.parse(stored);
@@ -389,7 +444,7 @@ export function BorrowSDKProvider({ children }: { children: ReactNode }) {
         if (sdk.baseWalletAddress) {
           setBaseAddress(sdk.baseWalletAddress);
         }
-        console.log('[SDK] Auto-restored session from storage');
+        console.log("[SDK] Auto-restored session from storage");
       }
     }
   }, [sdk, session]);
@@ -405,16 +460,42 @@ export function BorrowSDKProvider({ children }: { children: ReactNode }) {
     setQuotes([]);
     setTransactions([]);
     setRepayTransactions([]);
+    setWalletPortfolio(null);
+    setWalletPositions(null);
     setError(null);
     setBaseAddress(null);
     setWorkflowStatus(null);
     setDepositInfo(null);
-    localStorage.removeItem('borrow_sdk_connection');
+    localStorage.removeItem("borrow_sdk_connection");
+  }, [sdk]);
+
+  const ensureBaseWalletAddress = useCallback(async () => {
+    if (!sdk) return null;
+
+    const existingBaseWallet = await sdk.ensureBaseWallet();
+    if (existingBaseWallet) {
+      setBaseAddress(existingBaseWallet);
+      return existingBaseWallet;
+    }
+
+    try {
+      const restored = await sdk.restoreSession();
+      if (restored && sdk.baseWalletAddress) {
+        setUserStatus(restored.userStatus);
+        setSession(restored.activeSession);
+        setBaseAddress(sdk.baseWalletAddress);
+        return sdk.baseWalletAddress;
+      }
+    } catch (err) {
+      console.warn("[ensureBaseWalletAddress] Failed to restore session:", err);
+    }
+
+    return null;
   }, [sdk]);
 
   // Restore existing session (no new signature required if session is valid)
   const restoreSession = useCallback(async () => {
-    if (!sdk) throw new Error('SDK not initialized');
+    if (!sdk) throw new Error("SDK not initialized");
     setTransactionsLoading(true);
     setError(null);
     try {
@@ -424,19 +505,23 @@ export function BorrowSDKProvider({ children }: { children: ReactNode }) {
         setSession(restored.activeSession);
         // Handle various response formats (cast to any for runtime flexibility)
         const res = restored as any;
-        const rawTxs = res?.transactions || res?.data?.transactions || res?.additional?.transactions || [];
+        const rawTxs =
+          res?.transactions ||
+          res?.data?.transactions ||
+          res?.additional?.transactions ||
+          [];
         setTransactions(rawTxs.map(transformTransaction));
         if (sdk.baseWalletAddress) {
           setBaseAddress(sdk.baseWalletAddress);
         }
-        console.log('[restoreSession] Session restored successfully');
+        console.log("[restoreSession] Session restored successfully");
         return restored;
       }
-      console.log('[restoreSession] No valid session found');
+      console.log("[restoreSession] No valid session found");
       return null;
     } catch (err) {
-      console.error('[restoreSession] Error:', err);
-      setError(err instanceof Error ? err.message : 'Restore failed');
+      console.error("[restoreSession] Error:", err);
+      setError(err instanceof Error ? err.message : "Restore failed");
       return null;
     } finally {
       setTransactionsLoading(false);
@@ -445,14 +530,14 @@ export function BorrowSDKProvider({ children }: { children: ReactNode }) {
 
   // Setup for loan (creates new loan wallet - requires signature)
   const setupForLoan = useCallback(async () => {
-    if (!sdk) throw new Error('SDK not initialized');
+    if (!sdk) throw new Error("SDK not initialized");
 
     if (session && sdk.hasValidSession?.()) {
-      console.log('[setupForLoan] Session already active, skipping restore');
+      console.log("[setupForLoan] Session already active, skipping restore");
       return {
         userStatus,
         activeSession: session,
-        transactions
+        transactions,
       };
     }
 
@@ -465,27 +550,37 @@ export function BorrowSDKProvider({ children }: { children: ReactNode }) {
         setSession(restored.activeSession);
         // Handle various response formats (cast to any for runtime flexibility)
         const res = restored as any;
-        const rawTxs = res?.transactions || res?.data?.transactions || res?.additional?.transactions || [];
+        const rawTxs =
+          res?.transactions ||
+          res?.data?.transactions ||
+          res?.additional?.transactions ||
+          [];
         setTransactions(rawTxs.map(transformTransaction));
         if (sdk.baseWalletAddress) {
           setBaseAddress(sdk.baseWalletAddress);
         }
-        console.log('[setupForLoan] Existing session restored, no signature needed');
+        console.log(
+          "[setupForLoan] Existing session restored, no signature needed",
+        );
         return restored;
       }
 
-      console.log('[setupForLoan] No valid session, performing full setup');
+      console.log("[setupForLoan] No valid session, performing full setup");
       const result = await sdk.setupForLoan();
       setUserStatus(result.userStatus);
       setSession(result.activeSession);
       // Handle various response formats (cast to any for runtime flexibility)
       const res = result as any;
-      const rawTxs = res?.transactions || res?.data?.transactions || res?.additional?.transactions || [];
+      const rawTxs =
+        res?.transactions ||
+        res?.data?.transactions ||
+        res?.additional?.transactions ||
+        [];
       setTransactions(rawTxs.map(transformTransaction));
       setBaseAddress(result.baseWallet.address);
       return result;
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Setup failed');
+      setError(err instanceof Error ? err.message : "Setup failed");
       throw err;
     } finally {
       setTransactionsLoading(false);
@@ -497,158 +592,201 @@ export function BorrowSDKProvider({ children }: { children: ReactNode }) {
     if (!sdk) return;
     setTransactionsLoading(true);
     try {
-      const history = await sdk.getUserTransactions(1, 50, 'all');
+      const history = await sdk.getUserTransactions(1, 50, "all");
       // Handle various response formats (cast to any for runtime flexibility)
       const res = history as any;
-      const rawTxs = res?.transactions || res?.data?.transactions || res?.additional?.transactions || [];
+      const rawTxs =
+        res?.transactions ||
+        res?.data?.transactions ||
+        res?.additional?.transactions ||
+        [];
       const transformedTxs = rawTxs.map(transformTransaction);
-      console.log('[loadTransactions] Transformed transactions:', transformedTxs.slice(0, 2));
+      console.log(
+        "[loadTransactions] Transformed transactions:",
+        transformedTxs.slice(0, 2),
+      );
       setTransactions(transformedTxs);
     } catch (err) {
-      console.error('Failed to load transactions:', err);
-      setError(err instanceof Error ? err.message : 'Failed to load transactions');
+      console.error("Failed to load transactions:", err);
+      setError(
+        err instanceof Error ? err.message : "Failed to load transactions",
+      );
     } finally {
       setTransactionsLoading(false);
     }
   }, [sdk]);
 
   // Fetch quotes
-  const fetchQuotes = useCallback(async (collateral: string, loanAmount: string, ltv: number) => {
-    if (!sdk) throw new Error('SDK not initialized');
-    setQuotesLoading(true);
-    setError(null);
-    try {
-      const collateralSatoshis = Units.btcToSats(collateral).toString();
-      console.log('[fetchQuotes] Requesting quotes with:', { collateralSatoshis, loanAmount, ltv });
+  const fetchQuotes = useCallback(
+    async (collateral: string, loanAmount: string, ltv: number) => {
+      if (!sdk) throw new Error("SDK not initialized");
+      setQuotesLoading(true);
+      setError(null);
+      try {
+        const collateralSatoshis = Units.btcToSats(collateral).toString();
+        console.log("[fetchQuotes] Requesting quotes with:", {
+          collateralSatoshis,
+          loanAmount,
+          ltv,
+        });
 
-      const quotesData = await sdk.getQuotes({
-        collateralAmount: collateralSatoshis,
-        loanAmount,
-        ltv
-      });
+        const quotesData = await sdk.getQuotes({
+          collateralAmount: collateralSatoshis,
+          loanAmount,
+          ltv,
+        });
 
-      console.log('[fetchQuotes] Received quotes:', quotesData);
+        console.log("[fetchQuotes] Received quotes:", quotesData);
 
-      const extractedQuotes = ResponseNormalizer.normalizeQuotes(quotesData);
-      console.log('[fetchQuotes] Normalized quotes count:', extractedQuotes.length);
+        const extractedQuotes = ResponseNormalizer.normalizeQuotes(quotesData);
+        console.log(
+          "[fetchQuotes] Normalized quotes count:",
+          extractedQuotes.length,
+        );
 
-      setQuotes(extractedQuotes);
-      return quotesData;
-    } catch (err) {
-      console.error('[fetchQuotes] Error:', err);
-      setError(err instanceof Error ? err.message : 'Failed to fetch quotes');
-      throw err;
-    } finally {
-      setQuotesLoading(false);
-    }
-  }, [sdk]);
+        setQuotes(extractedQuotes);
+        return quotesData;
+      } catch (err) {
+        console.error("[fetchQuotes] Error:", err);
+        setError(err instanceof Error ? err.message : "Failed to fetch quotes");
+        throw err;
+      } finally {
+        setQuotesLoading(false);
+      }
+    },
+    [sdk],
+  );
 
   // Execute borrow and automatically track workflow
-  const borrow = useCallback(async (quote: Quote, destinationAddress?: string) => {
-    if (!sdk) throw new Error('SDK not initialized');
-    setBorrowing(true);
-    setError(null);
-    setWorkflowStatus(null);
-    setDepositInfo(null);
-    try {
-      if (!sdk.baseWalletAddress) {
-        console.log('[borrow] Base wallet not set, checking for existing session...');
-        const restored = await sdk.restoreSession();
-        if (restored && sdk.baseWalletAddress) {
-          console.log('[borrow] Session restored, base wallet:', sdk.baseWalletAddress);
-          setSession(restored.activeSession);
-          setUserStatus(restored.userStatus);
-          setBaseAddress(sdk.baseWalletAddress);
+  const borrow = useCallback(
+    async (quote: Quote, destinationAddress?: string) => {
+      if (!sdk) throw new Error("SDK not initialized");
+      setBorrowing(true);
+      setError(null);
+      setWorkflowStatus(null);
+      setDepositInfo(null);
+      try {
+        if (!sdk.baseWalletAddress) {
+          console.log(
+            "[borrow] Base wallet not set, checking for existing session...",
+          );
+          const restored = await sdk.restoreSession();
+          if (restored && sdk.baseWalletAddress) {
+            console.log(
+              "[borrow] Session restored, base wallet:",
+              sdk.baseWalletAddress,
+            );
+            setSession(restored.activeSession);
+            setUserStatus(restored.userStatus);
+            setBaseAddress(sdk.baseWalletAddress);
+          }
         }
-      }
 
-      if (!sdk.baseWalletAddress) {
-        console.log('[borrow] No base wallet, calling setup first...');
-        const setup = await sdk.setup();
-        setSession(setup.activeSession);
-        setUserStatus(setup.userStatus);
-        setBaseAddress(setup.baseWallet.address);
-        console.log('[borrow] Setup complete, base wallet:', setup.baseWallet.address);
-      }
-
-      const finalDestination = destinationAddress || sdk.baseWalletAddress;
-
-      console.log('[borrow] Starting borrow with executeBorrow...');
-      console.log('[borrow] Destination (base wallet):', finalDestination);
-
-      const workflowId = await sdk.executeBorrow(quote, {
-        destinationAddress: finalDestination || undefined
-      });
-
-      console.log('[borrow] Loan initiated, workflowId:', workflowId);
-
-      if (sdk.userStatus) {
-        setUserStatus(sdk.userStatus);
-      }
-      const activeSession = sdk.getActiveSession?.();
-      if (activeSession) {
-        setSession(activeSession);
-      }
-
-      console.log('[borrow] Starting workflow tracking...');
-      await sdk.resumeLoan(workflowId, {
-        onStatusUpdate: (status: SDKWorkflowStatus) => {
-          console.log('[borrow] Workflow status update:', status);
-          setWorkflowStatus(status as WorkflowStatus);
-        },
-        onDepositReady: (info: DepositInfo) => {
-          console.log('[borrow] Deposit ready:', info);
-          setDepositInfo(info);
-        },
-        onComplete: () => {
-          console.log('[borrow] Workflow complete');
-          setBorrowing(false);
-          loadTransactions();
-        },
-        onError: (err: string) => {
-          console.error('[borrow] Workflow error:', err);
-          setError(err);
-          setBorrowing(false);
+        if (!sdk.baseWalletAddress) {
+          console.log("[borrow] No base wallet, calling setup first...");
+          const setup = await sdk.setup();
+          setSession(setup.activeSession);
+          setUserStatus(setup.userStatus);
+          setBaseAddress(setup.baseWallet.address);
+          console.log(
+            "[borrow] Setup complete, base wallet:",
+            setup.baseWallet.address,
+          );
         }
-      });
 
-      return workflowId;
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Borrow failed');
-      setBorrowing(false);
-      throw err;
-    }
-  }, [sdk, loadTransactions]);
+        const finalDestination = destinationAddress || sdk.baseWalletAddress;
+
+        console.log("[borrow] Starting borrow with executeBorrow...");
+        console.log("[borrow] Destination (base wallet):", finalDestination);
+
+        const workflowId = await sdk.executeBorrow(quote, {
+          destinationAddress: finalDestination || undefined,
+        });
+
+        console.log("[borrow] Loan initiated, workflowId:", workflowId);
+
+        if (sdk.userStatus) {
+          setUserStatus(sdk.userStatus);
+        }
+        const activeSession = sdk.getActiveSession?.();
+        if (activeSession) {
+          setSession(activeSession);
+        }
+
+        console.log("[borrow] Starting workflow tracking...");
+        await sdk.resumeLoan(workflowId, {
+          onStatusUpdate: (status: SDKWorkflowStatus) => {
+            console.log("[borrow] Workflow status update:", status);
+            setWorkflowStatus(status as WorkflowStatus);
+          },
+          onDepositReady: (info: DepositInfo) => {
+            console.log("[borrow] Deposit ready:", info);
+            setDepositInfo(info);
+          },
+          onComplete: () => {
+            console.log("[borrow] Workflow complete");
+            setBorrowing(false);
+            loadTransactions();
+          },
+          onError: (err: string) => {
+            console.error("[borrow] Workflow error:", err);
+            setError(err);
+            setBorrowing(false);
+          },
+        });
+
+        return workflowId;
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Borrow failed");
+        setBorrowing(false);
+        throw err;
+      }
+    },
+    [sdk, loadTransactions],
+  );
 
   // Get workflow status
-  const getStatus = useCallback(async (workflowId: string) => {
-    if (!sdk) throw new Error('SDK not initialized');
-    return sdk.getStatus(workflowId);
-  }, [sdk]);
+  const getStatus = useCallback(
+    async (workflowId: string) => {
+      if (!sdk) throw new Error("SDK not initialized");
+      return sdk.getStatus(workflowId);
+    },
+    [sdk],
+  );
 
   // Resume loan
-  const resumeLoan = useCallback(async (workflowId: string) => {
-    if (!sdk) throw new Error('SDK not initialized');
-    setBorrowing(true);
-    setError(null);
-    setWorkflowStatus(null);
-    setDepositInfo(null);
-    try {
-      await sdk.resumeLoan(workflowId, {
-        onStatusUpdate: (status: SDKWorkflowStatus) => setWorkflowStatus(status as WorkflowStatus),
-        onDepositReady: (info: DepositInfo) => setDepositInfo(info),
-        onComplete: () => { setBorrowing(false); loadTransactions(); },
-        onError: (err: string) => { setError(err); setBorrowing(false); }
-      });
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to resume');
-      setBorrowing(false);
-    }
-  }, [sdk, loadTransactions]);
+  const resumeLoan = useCallback(
+    async (workflowId: string) => {
+      if (!sdk) throw new Error("SDK not initialized");
+      setBorrowing(true);
+      setError(null);
+      setWorkflowStatus(null);
+      setDepositInfo(null);
+      try {
+        await sdk.resumeLoan(workflowId, {
+          onStatusUpdate: (status: SDKWorkflowStatus) =>
+            setWorkflowStatus(status as WorkflowStatus),
+          onDepositReady: (info: DepositInfo) => setDepositInfo(info),
+          onComplete: () => {
+            setBorrowing(false);
+            loadTransactions();
+          },
+          onError: (err: string) => {
+            setError(err);
+            setBorrowing(false);
+          },
+        });
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Failed to resume");
+        setBorrowing(false);
+      }
+    },
+    [sdk, loadTransactions],
+  );
 
   // Start new loan
   const startNewLoan = useCallback(async () => {
-    if (!sdk) throw new Error('SDK not initialized');
+    if (!sdk) throw new Error("SDK not initialized");
     setBorrowing(true);
     setError(null);
     try {
@@ -658,7 +796,7 @@ export function BorrowSDKProvider({ children }: { children: ReactNode }) {
       setQuotes([]);
       return result;
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to start new loan');
+      setError(err instanceof Error ? err.message : "Failed to start new loan");
       throw err;
     } finally {
       setBorrowing(false);
@@ -666,230 +804,300 @@ export function BorrowSDKProvider({ children }: { children: ReactNode }) {
   }, [sdk]);
 
   // Repay (supports options for collateral, partial repay, etc.)
-  const repay = useCallback(async (
-    originalBorrowId: string,
-    repayAmount: string,
-    options?: any
-  ) => {
-    if (!sdk) throw new Error('SDK not initialized');
-    setRepaying(true);
-    setError(null);
-    try {
-      // Use ensureBaseWalletWithSignature() which only sets up base wallet
-      // Unlike setup(), this does NOT create a new loan wallet
-      console.log('[repay] Ensuring base wallet with signature...');
-      const { address: baseWallet, signature: baseWalletSignature } = await sdk.ensureBaseWalletWithSignature();
-      setBaseAddress(baseWallet);
+  const repay = useCallback(
+    async (originalBorrowId: string, repayAmount: string, options?: any) => {
+      if (!sdk) throw new Error("SDK not initialized");
+      setRepaying(true);
+      setError(null);
+      try {
+        // Use ensureBaseWalletWithSignature() which only sets up base wallet
+        // Unlike setup(), this does NOT create a new loan wallet
+        console.log("[repay] Ensuring base wallet with signature...");
+        const { address: baseWallet, signature: baseWalletSignature } =
+          await sdk.ensureBaseWalletWithSignature();
+        setBaseAddress(baseWallet);
 
-      console.log('[repay] Using base wallet for repayment:', {
-        address: baseWallet,
-        hasSignature: !!baseWalletSignature,
-      });
+        console.log("[repay] Using base wallet for repayment:", {
+          address: baseWallet,
+          hasSignature: !!baseWalletSignature,
+        });
 
-      if (!baseWalletSignature) {
-        throw new Error('Failed to obtain wallet signature. Please try again.');
+        if (!baseWalletSignature) {
+          throw new Error(
+            "Failed to obtain wallet signature. Please try again.",
+          );
+        }
+
+        const loan = transactions.find((t) => t.id === originalBorrowId);
+        const loanAmount = loan ? parseFloat(loan.amount) : 0;
+        const repayAmountNum = parseFloat(repayAmount);
+        const isPartialRepay = repayAmountNum < loanAmount;
+
+        console.log("[repay] Repaying loan:", {
+          originalBorrowId,
+          repayAmount,
+          loanAmount,
+          isPartialRepay,
+          sourceWallet: baseWallet,
+          options,
+        });
+
+        const transactionId = await sdk.repay(originalBorrowId, repayAmount, {
+          trackWorkflow: false,
+          sourceWalletAddress: baseWallet,
+          sourceWalletSignature: baseWalletSignature,
+          ...options,
+        });
+        await loadTransactions();
+        return transactionId;
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Repay failed");
+        throw err;
+      } finally {
+        setRepaying(false);
       }
-
-      const loan = transactions.find(t => t.id === originalBorrowId);
-      const loanAmount = loan ? parseFloat(loan.amount) : 0;
-      const repayAmountNum = parseFloat(repayAmount);
-      const isPartialRepay = repayAmountNum < loanAmount;
-
-      console.log('[repay] Repaying loan:', {
-        originalBorrowId,
-        repayAmount,
-        loanAmount,
-        isPartialRepay,
-        sourceWallet: baseWallet,
-        options
-      });
-
-      const transactionId = await sdk.repay(originalBorrowId, repayAmount, {
-        trackWorkflow: false,
-        sourceWalletAddress: baseWallet,
-        sourceWalletSignature: baseWalletSignature,
-        ...options
-      });
-      await loadTransactions();
-      return transactionId;
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Repay failed');
-      throw err;
-    } finally {
-      setRepaying(false);
-    }
-  }, [sdk, loadTransactions, transactions]);
+    },
+    [sdk, loadTransactions, transactions],
+  );
 
   // Get repay status
-  const getRepayStatus = useCallback(async (transactionId: string) => {
-    if (!sdk) throw new Error('SDK not initialized');
-    return sdk.getRepayStatus(transactionId);
-  }, [sdk]);
+  const getRepayStatus = useCallback(
+    async (transactionId: string) => {
+      if (!sdk) throw new Error("SDK not initialized");
+      return sdk.getRepayStatus(transactionId);
+    },
+    [sdk],
+  );
 
   // Load repay transactions
-  const loadRepayTransactions = useCallback(async (loanId?: string) => {
-    if (!sdk) return;
-    try {
-      const txs = await sdk.getRepayTransactions(loanId);
-      setRepayTransactions(txs);
-    } catch (err) {
-      console.error('Failed to load repay transactions:', err);
-    }
-  }, [sdk]);
+  const loadRepayTransactions = useCallback(
+    async (loanId?: string) => {
+      if (!sdk) return;
+      try {
+        const txs = await sdk.getRepayTransactions(loanId);
+        setRepayTransactions(txs);
+      } catch (err) {
+        console.error("Failed to load repay transactions:", err);
+      }
+    },
+    [sdk],
+  );
 
   // Resume repay workflow
-  const resumeRepayWorkflow = useCallback(async (transactionId: string) => {
-    if (!sdk) throw new Error('SDK not initialized');
-    setRepaying(true);
-    setError(null);
-    setWorkflowStatus(null);
-    try {
-      await sdk.trackWorkflow(transactionId, {
-        onStatusUpdate: (status: SDKWorkflowStatus) => setWorkflowStatus(status as WorkflowStatus),
-        onComplete: () => { setRepaying(false); loadTransactions(); },
-        onError: (err: string) => { setError(err); setRepaying(false); }
-      }, 'repay');
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to resume');
-      setRepaying(false);
-    }
-  }, [sdk, loadTransactions]);
-
-  const getLoanCollateralInfo = useCallback(async (loanId: string): Promise<LoanCollateralInfo | null> => {
-    if (sdk && sdk.getLoanCollateralInfo) {
+  const resumeRepayWorkflow = useCallback(
+    async (transactionId: string) => {
+      if (!sdk) throw new Error("SDK not initialized");
+      setRepaying(true);
+      setError(null);
+      setWorkflowStatus(null);
       try {
-        const info = await sdk.getLoanCollateralInfo(loanId);
-        if (info) return info;
+        await sdk.trackWorkflow(
+          transactionId,
+          {
+            onStatusUpdate: (status: SDKWorkflowStatus) =>
+              setWorkflowStatus(status as WorkflowStatus),
+            onComplete: () => {
+              setRepaying(false);
+              loadTransactions();
+            },
+            onError: (err: string) => {
+              setError(err);
+              setRepaying(false);
+            },
+          },
+          "repay",
+        );
       } catch (err) {
-        console.warn('[getLoanCollateralInfo] SDK call failed, falling back to transaction data:', err);
+        setError(err instanceof Error ? err.message : "Failed to resume");
+        setRepaying(false);
       }
-    }
+    },
+    [sdk, loadTransactions],
+  );
 
-    const tx = transactions.find(t => t.id === loanId);
-    if (tx) {
-      const collateralSats = tx.borrowTransaction?.collateralAmount || '0';
-      const loanAmount = tx.amount || '0';
-      return {
-        totalCollateral: collateralSats,
-        availableCollateral: collateralSats,
-        maxWithdrawable: '0',
-        totalDebt: loanAmount,
-        remainingDebt: loanAmount
-      };
-    }
+  const getLoanCollateralInfo = useCallback(
+    async (loanId: string): Promise<LoanCollateralInfo | null> => {
+      if (sdk && sdk.getLoanCollateralInfo) {
+        try {
+          const info = await sdk.getLoanCollateralInfo(loanId);
+          if (info) return info;
+        } catch (err) {
+          console.warn(
+            "[getLoanCollateralInfo] SDK call failed, falling back to transaction data:",
+            err,
+          );
+        }
+      }
 
-    return null;
-  }, [sdk, transactions]);
+      const tx = transactions.find((t) => t.id === loanId);
+      if (tx) {
+        const collateralSats = tx.borrowTransaction?.collateralAmount || "0";
+        const loanAmount = tx.amount || "0";
+        return {
+          totalCollateral: collateralSats,
+          availableCollateral: collateralSats,
+          maxWithdrawable: "0",
+          totalDebt: loanAmount,
+          remainingDebt: loanAmount,
+        };
+      }
+
+      return null;
+    },
+    [sdk, transactions],
+  );
 
   // Send bitcoin
-  const sendBitcoin = useCallback(async (toAddress: string, satoshis: number) => {
-    if (!sdk) throw new Error('SDK not initialized');
-    try {
-      return await sdk.sendBitcoin(toAddress, satoshis);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Send failed');
-      throw err;
-    }
-  }, [sdk]);
+  const sendBitcoin = useCallback(
+    async (toAddress: string, satoshis: number) => {
+      if (!sdk) throw new Error("SDK not initialized");
+      try {
+        return await sdk.sendBitcoin(toAddress, satoshis);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Send failed");
+        throw err;
+      }
+    },
+    [sdk],
+  );
 
   // Get wallet portfolio
   const getWalletPortfolio = useCallback(async () => {
     if (!sdk) return;
     setPortfolioLoading(true);
     try {
+      const baseWallet = await ensureBaseWalletAddress();
+      if (!baseWallet) {
+        setWalletPortfolio(null);
+        return;
+      }
+
       const result = await sdk.getWalletPortfolio();
       // Handle both { data: WalletPortfolio } and direct WalletPortfolio
       const portfolio = result?.data || result;
       setWalletPortfolio(portfolio);
     } catch (err) {
-      console.error('[getWalletPortfolio] Error:', err);
+      console.error("[getWalletPortfolio] Error:", err);
     } finally {
       setPortfolioLoading(false);
     }
-  }, [sdk]);
+  }, [sdk, ensureBaseWalletAddress]);
 
   // Get wallet positions
   const getWalletPositions = useCallback(async () => {
     if (!sdk) return;
     setPortfolioLoading(true);
     try {
+      const baseWallet = await ensureBaseWalletAddress();
+      if (!baseWallet) {
+        setWalletPositions(null);
+        return;
+      }
+
       const result = await sdk.getWalletPositions();
       setWalletPositions(result);
     } catch (err) {
-      console.error('[getWalletPositions] Error:', err);
+      console.error("[getWalletPositions] Error:", err);
     } finally {
       setPortfolioLoading(false);
     }
-  }, [sdk]);
+  }, [sdk, ensureBaseWalletAddress]);
 
   // Withdraw collateral
-  const withdrawCollateral = useCallback(async (loanId: string, amount: string, address: string) => {
-    if (!sdk) throw new Error('SDK not initialized');
-    setRepaying(true); // Use repaying state for withdraw operations
-    setError(null);
-    try {
-      // Use ensureBaseWalletWithSignature() which only sets up base wallet
-      // Unlike setup(), this does NOT create a new loan wallet
-      console.log('[withdrawCollateral] Ensuring base wallet with signature...');
-      const { address: baseWallet, signature: baseWalletSignature } = await sdk.ensureBaseWalletWithSignature();
-      setBaseAddress(baseWallet);
+  const withdrawCollateral = useCallback(
+    async (loanId: string, amount: string, address: string) => {
+      if (!sdk) throw new Error("SDK not initialized");
+      setRepaying(true); // Use repaying state for withdraw operations
+      setError(null);
+      try {
+        // Use ensureBaseWalletWithSignature() which only sets up base wallet
+        // Unlike setup(), this does NOT create a new loan wallet
+        console.log(
+          "[withdrawCollateral] Ensuring base wallet with signature...",
+        );
+        const { address: baseWallet, signature: baseWalletSignature } =
+          await sdk.ensureBaseWalletWithSignature();
+        setBaseAddress(baseWallet);
 
-      console.log('[withdrawCollateral] Using base wallet:', {
-        address: baseWallet,
-        hasSignature: !!baseWalletSignature,
-      });
+        console.log("[withdrawCollateral] Using base wallet:", {
+          address: baseWallet,
+          hasSignature: !!baseWalletSignature,
+        });
 
-      if (!baseWalletSignature) {
-        throw new Error('Failed to obtain wallet signature. Please try again.');
+        if (!baseWalletSignature) {
+          throw new Error(
+            "Failed to obtain wallet signature. Please try again.",
+          );
+        }
+
+        // Get the loan to find its loanIndex
+        const loan = transactions.find((t) => t.id === loanId);
+        const loanIndex = loan?.borrowTransaction?.loanIndex ?? 0;
+
+        const transactionId = await sdk.withdrawCollateral(
+          loanId,
+          amount,
+          address,
+          {
+            sourceWalletAddress: baseWallet,
+            sourceWalletSignature: baseWalletSignature,
+            loanIndex,
+          },
+        );
+
+        await loadTransactions();
+        return transactionId;
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Withdraw failed");
+        throw err;
+      } finally {
+        setRepaying(false);
       }
-
-      // Get the loan to find its loanIndex
-      const loan = transactions.find(t => t.id === loanId);
-      const loanIndex = loan?.borrowTransaction?.loanIndex ?? 0;
-
-      const transactionId = await sdk.withdrawCollateral(loanId, amount, address, {
-        sourceWalletAddress: baseWallet,
-        sourceWalletSignature: baseWalletSignature,
-        loanIndex,
-      });
-
-      await loadTransactions();
-      return transactionId;
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Withdraw failed');
-      throw err;
-    } finally {
-      setRepaying(false);
-    }
-  }, [sdk, transactions, loadTransactions]);
+    },
+    [sdk, transactions, loadTransactions],
+  );
 
   // Withdraw to EVM (adapt signature to match SDK's object-based params)
-  const withdrawToEVM = useCallback(async (chain: any, amount: string, destinationAddress: string) => {
-    if (!sdk) throw new Error('SDK not initialized');
+  const withdrawToEVM = useCallback(
+    async (chain: any, amount: string, destinationAddress: string) => {
+      if (!sdk) throw new Error("SDK not initialized");
 
-    // Ensure base wallet is set up before withdrawal (same pattern as repay/withdrawCollateral)
-    const { address: baseWallet } = await sdk.ensureBaseWalletWithSignature();
-    setBaseAddress(baseWallet);
+      // Ensure base wallet is set up before withdrawal (same pattern as repay/withdrawCollateral)
+      const { address: baseWallet } = await sdk.ensureBaseWalletWithSignature();
+      setBaseAddress(baseWallet);
 
-    return sdk.withdrawToEVM({ chain, amount, destinationAddress });
-  }, [sdk]);
+      return sdk.withdrawToEVM({ chain, amount, destinationAddress });
+    },
+    [sdk],
+  );
 
   // Withdraw to Bitcoin (adapt signature to match SDK's object-based params)
-  const withdrawToBitcoin = useCallback(async (chain: any, amount: string, assetSymbol: string, btcAddress: string) => {
-    if (!sdk) throw new Error('SDK not initialized');
+  const withdrawToBitcoin = useCallback(
+    async (
+      chain: any,
+      amount: string,
+      assetSymbol: string,
+      btcAddress: string,
+    ) => {
+      if (!sdk) throw new Error("SDK not initialized");
 
-    // Ensure base wallet is set up before withdrawal (same pattern as repay/withdrawCollateral)
-    const { address: baseWallet } = await sdk.ensureBaseWalletWithSignature();
-    setBaseAddress(baseWallet);
+      // Ensure base wallet is set up before withdrawal (same pattern as repay/withdrawCollateral)
+      const { address: baseWallet } = await sdk.ensureBaseWalletWithSignature();
+      setBaseAddress(baseWallet);
 
-    return sdk.withdrawToBitcoin({ chain, amount, assetSymbol, btcAddress });
-  }, [sdk]);
+      return sdk.withdrawToBitcoin({ chain, amount, assetSymbol, btcAddress });
+    },
+    [sdk],
+  );
 
   // Get withdraw status
-  const getWithdrawStatus = useCallback(async (transactionId: string) => {
-    if (!sdk) throw new Error('SDK not initialized');
-    return sdk.getWithdrawStatus(transactionId);
-  }, [sdk]);
+  const getWithdrawStatus = useCallback(
+    async (transactionId: string) => {
+      if (!sdk) throw new Error("SDK not initialized");
+      return sdk.getWithdrawStatus(transactionId);
+    },
+    [sdk],
+  );
 
   const value: BorrowSDKContextType = {
     // Connection
@@ -968,7 +1176,7 @@ export function BorrowSDKProvider({ children }: { children: ReactNode }) {
 export function useBorrowSDK(): BorrowSDKContextType {
   const context = useContext(BorrowSDKContext);
   if (!context) {
-    throw new Error('useBorrowSDK must be used within a BorrowSDKProvider');
+    throw new Error("useBorrowSDK must be used within a BorrowSDKProvider");
   }
   return context;
 }

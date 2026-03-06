@@ -10,12 +10,13 @@ import { Separator } from '@/components/ui/separator';
 import { useBorrowSDK } from '@/hooks/useBorrowSDK';
 import { useBtcPrice } from '@/hooks/useBtcPrice';
 import { useToast } from '@/hooks/use-toast';
+import { formatTokenBalance, getChainAssetPosition } from '@/lib/walletPositions';
 import type { UserTransaction } from '@satsterminal-sdk/borrow';
 import { Units } from '@satsterminal-sdk/borrow';
 import {
   Loader2, Bitcoin, DollarSign, Shield, TrendingUp,
   ArrowDownToLine, Send, Wallet, AlertTriangle, Zap,
-  ExternalLink, Copy, Check
+  ExternalLink, Copy, Check, RefreshCw
 } from 'lucide-react';
 
 interface LoanDetailsDialogProps {
@@ -28,7 +29,8 @@ interface LoanDetailsDialogProps {
 export function LoanDetailsDialog({ open, onOpenChange, loan, onActionComplete }: LoanDetailsDialogProps) {
   const {
     repay, withdrawCollateral, withdrawToEVM,
-    btcAddress, baseAddress, repaying, getLoanCollateralInfo
+    btcAddress, baseAddress, repaying, getLoanCollateralInfo,
+    walletPositions, getWalletPositions, portfolioLoading
   } = useBorrowSDK();
   const { toast } = useToast();
   const btcPrice = useBtcPrice();
@@ -80,6 +82,8 @@ export function LoanDetailsDialog({ open, onOpenChange, loan, onActionComplete }
         })
         .finally(() => setLoadingInfo(false));
 
+      void getWalletPositions();
+
       // Reset form states
       setWithdrawBtcAddress(btcAddress || '');
       setWithdrawUsdcAddress('');
@@ -88,7 +92,7 @@ export function LoanDetailsDialog({ open, onOpenChange, loan, onActionComplete }
       setWithdrawAfterRepay(false);
       setCollateralToWithdrawAfterRepay('');
     }
-  }, [open, loan, btcAddress, getLoanCollateralInfo]);
+  }, [open, loan, btcAddress, getLoanCollateralInfo, getWalletPositions]);
 
   if (!loan) return null;
 
@@ -96,6 +100,12 @@ export function LoanDetailsDialog({ open, onOpenChange, loan, onActionComplete }
   const loanAmount = parseFloat(loan.amount) || 0;
   const protocol = loan.borrowTransaction?.protocol || 'AAVE';
   const chain = loan.borrowTransaction?.chain || 'BASE';
+  const repaymentAsset = loan.currency || 'USDC';
+  const repaymentChainLabel = String(chain)
+    .toLowerCase()
+    .split(/[_-]+/)
+    .map((part: string) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ');
   // Base wallet (where borrowed USDC is sent and used for repayment)
   const usdcWalletAddress = baseAddress || '';
 
@@ -110,6 +120,18 @@ export function LoanDetailsDialog({ open, onOpenChange, loan, onActionComplete }
   const totalCollateralBtc = collateralInfo ? parseCollateralValue(collateralInfo.totalCollateral) : 0;
   const maxWithdrawableBtc = collateralInfo ? parseCollateralValue(collateralInfo.maxWithdrawable) : 0;
   const remainingDebt = collateralInfo ? parseFloat(collateralInfo.remainingDebt) : loanAmount;
+  const repayAssetPosition = getChainAssetPosition(walletPositions, repaymentAsset, chain);
+  const repayAssetBalance = repayAssetPosition?.attributes.quantity.float || 0;
+  const walletPositionsLoaded =
+    !portfolioLoading && (Array.isArray(walletPositions) || walletPositions?.data !== undefined);
+  const maxRepayAmount = walletPositionsLoaded
+    ? Math.min(remainingDebt, repayAssetBalance)
+    : remainingDebt;
+  const hasEnoughRepayBalance = repayAssetBalance >= remainingDebt && remainingDebt > 0;
+  const showRepayBalanceWarning =
+    walletPositionsLoaded &&
+    parseFloat(repayAmount || '0') > 0 &&
+    parseFloat(repayAmount || '0') > repayAssetBalance;
 
   // Calculate health factor using Aave-style formula with 0.8 liquidation threshold
   const price = btcPrice ?? 0;
@@ -350,13 +372,62 @@ export function LoanDetailsDialog({ open, onOpenChange, loan, onActionComplete }
 
           {/* Repay Tab */}
           <TabsContent value="repay" className="mt-4 space-y-4">
-            <div className="p-3 bg-zinc-50 rounded-xl border-[0.5px]">
-              <p className="text-sm text-muted-foreground">Remaining Debt</p>
-              <p className="text-xl font-semibold font-mono">${remainingDebt.toLocaleString()} USDC</p>
+            <div className="grid gap-3 md:grid-cols-2">
+              <div className="p-3 bg-zinc-50 rounded-xl border-[0.5px]">
+                <p className="text-sm text-muted-foreground">Remaining Debt</p>
+                <p className="text-xl font-semibold font-mono">${remainingDebt.toLocaleString()} {repaymentAsset}</p>
+              </div>
+
+              <div className="p-3 bg-zinc-50 rounded-xl border-[0.5px] space-y-2">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Repay Source Balance</p>
+                    {portfolioLoading ? (
+                      <Loader2 className="h-4 w-4 animate-spin mt-1" />
+                    ) : (
+                      <p className="text-xl font-semibold font-mono">
+                        {formatTokenBalance(repayAssetBalance)} {repaymentAsset}
+                      </p>
+                    )}
+                    <p className="text-xs text-muted-foreground">Base smart account on {repaymentChainLabel}</p>
+                  </div>
+
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 px-2 text-xs"
+                    onClick={() => void getWalletPositions()}
+                    disabled={portfolioLoading}
+                  >
+                    {portfolioLoading ? (
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                    ) : (
+                      <>
+                        <RefreshCw className="h-3 w-3 mr-1" />
+                        Refresh
+                      </>
+                    )}
+                  </Button>
+                </div>
+
+                <p className={`text-xs ${
+                  hasEnoughRepayBalance
+                    ? 'text-green-600'
+                    : repayAssetBalance > 0
+                      ? 'text-amber-600'
+                      : 'text-red-600'
+                }`}>
+                  {hasEnoughRepayBalance
+                    ? `Enough ${repaymentAsset} in the repay source wallet on ${repaymentChainLabel} to fully repay this loan.`
+                    : repayAssetBalance > 0
+                      ? `You can currently repay up to ${formatTokenBalance(repayAssetBalance)} ${repaymentAsset} from the repay source wallet on ${repaymentChainLabel}.`
+                      : `No ${repaymentAsset} detected in the repay source wallet on ${repaymentChainLabel} right now.`}
+                </p>
+              </div>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="repayAmount">Repay Amount (USDC)</Label>
+              <Label htmlFor="repayAmount">Repay Amount ({repaymentAsset})</Label>
               <div className="relative">
                 <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -372,14 +443,19 @@ export function LoanDetailsDialog({ open, onOpenChange, loan, onActionComplete }
                   variant="ghost"
                   size="sm"
                   className="absolute right-1 top-1/2 -translate-y-1/2"
-                  onClick={() => setRepayAmount(remainingDebt.toString())}
+                  onClick={() => setRepayAmount(maxRepayAmount.toString())}
                 >
                   Max
                 </Button>
               </div>
               <p className="text-xs text-muted-foreground">
-                Repaying from base wallet: {usdcWalletAddress ? `${usdcWalletAddress.slice(0, 10)}...${usdcWalletAddress.slice(-8)}` : 'Not set'}
+                Repaying from base smart account: {usdcWalletAddress ? `${usdcWalletAddress.slice(0, 10)}...${usdcWalletAddress.slice(-8)}` : 'Not set'}
               </p>
+              {showRepayBalanceWarning && (
+                <p className="text-xs text-amber-600">
+                  Entered amount is above your current repay-source {repaymentAsset} balance on {repaymentChainLabel}.
+                </p>
+              )}
             </div>
 
             {isFullRepayment && (
