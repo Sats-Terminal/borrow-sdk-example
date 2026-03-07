@@ -4,19 +4,22 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useBorrowSDK } from '@/hooks/useBorrowSDK';
 import { useToast } from '@/hooks/use-toast';
-import { Units } from '@satsterminal-sdk/borrow';
+import { Units } from '@/lib/units';
 import { Loader2, ArrowRight, Bitcoin, DollarSign } from 'lucide-react';
 import type { Quote } from '@satsterminal-sdk/borrow';
 
 export function QuoteDisplay() {
   const { filteredQuotes, borrow, borrowing, baseAddress, protocolFilter, quotesLoading } = useBorrowSDK();
   const { toast } = useToast();
-  const [selectedQuote, setSelectedQuote] = useState<Quote | null>(null);
+  const [activeQuoteKey, setActiveQuoteKey] = useState<string | null>(null);
 
   const quotes = filteredQuotes;
+  const getQuoteKey = (quote: Quote) =>
+    `${quote.protocol}-${quote.chain}-${quote.loanAmount}-${quote.collateralAmount}-${quote.borrowApy?.variable || '0'}`;
 
   const handleBorrow = async (quote: Quote) => {
-    setSelectedQuote(quote);
+    const quoteKey = getQuoteKey(quote);
+    setActiveQuoteKey(quoteKey);
     try {
       const workflowId = await borrow(quote, baseAddress || undefined);
       toast({
@@ -30,7 +33,8 @@ export function QuoteDisplay() {
         description: err instanceof Error ? err.message : 'Failed to initiate borrow',
         variant: 'destructive'
       });
-      setSelectedQuote(null);
+    } finally {
+      setActiveQuoteKey(null);
     }
   };
 
@@ -96,7 +100,7 @@ export function QuoteDisplay() {
             {quotes.map((quote, index) => {
               const variableApy = parseFloat(quote.borrowApy?.variable || '0') || 0;
               const isBest = index === 0;
-              const isSelected = selectedQuote === quote;
+              const isSelected = activeQuoteKey === getQuoteKey(quote);
 
               return (
                 <div
@@ -145,11 +149,11 @@ export function QuoteDisplay() {
                   {/* Action */}
                   <Button
                     onClick={() => handleBorrow(quote)}
-                    disabled={borrowing}
+                    disabled={borrowing && isSelected}
                     variant={isBest ? "accent" : "secondary"}
                     className="w-full h-9"
                   >
-                    {isSelected ? (
+                    {isSelected && borrowing ? (
                       <>
                         <Loader2 className="h-4 w-4 animate-spin" />
                         Initiating...

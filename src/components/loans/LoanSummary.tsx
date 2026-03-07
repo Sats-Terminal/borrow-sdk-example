@@ -1,7 +1,7 @@
 import { Card, CardContent } from '@/components/ui/card';
 import { useBorrowSDK } from '@/hooks/useBorrowSDK';
 import { Bitcoin, DollarSign, TrendingUp } from 'lucide-react';
-import { Units } from '@satsterminal-sdk/borrow';
+import { Units } from '@/lib/units';
 
 export function LoanSummary() {
   const { transactions } = useBorrowSDK();

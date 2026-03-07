@@ -7,7 +7,7 @@ import { useBorrowSDK } from '@/hooks/useBorrowSDK';
 import { useBtcPrice } from '@/hooks/useBtcPrice';
 import { LoanActions } from './LoanActions';
 import type { UserTransaction, LoanCollateralInfo } from '@satsterminal-sdk/borrow';
-import { Units } from '@satsterminal-sdk/borrow';
+import { Units } from '@/lib/units';
 import { Bitcoin, DollarSign, Shield, CheckCircle2, Clock, Loader2, AlertCircle } from 'lucide-react';
 
 interface LoanCardProps {

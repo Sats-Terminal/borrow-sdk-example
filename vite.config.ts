@@ -12,6 +12,13 @@ export default defineConfig({
   },
   build: {
     target: 'es2020',
+    commonjsOptions: {
+      include: [
+        /node_modules/,
+        /satsterminal-sdk\/packages\/borrow/,
+        /satsterminal-sdk\/packages\/core/,
+      ],
+    },
   },
   resolve: {
     alias: {

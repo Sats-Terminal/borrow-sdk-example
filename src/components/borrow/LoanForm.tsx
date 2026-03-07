@@ -15,7 +15,7 @@ import {
 import { useBorrowSDK } from '@/hooks/useBorrowSDK';
 import { useBtcPrice } from '@/hooks/useBtcPrice';
 import { useToast } from '@/hooks/use-toast';
-import { Units } from '@satsterminal-sdk/borrow';
+import { Units } from '@/lib/units';
 import { Loader2, Bitcoin, ChevronRight } from 'lucide-react';
 
 type ProtocolFilter = 'all' | 'aave' | 'morpho';

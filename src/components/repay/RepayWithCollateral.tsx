@@ -6,7 +6,7 @@ import { useBorrowSDK } from '@/hooks/useBorrowSDK';
 import { useBtcPrice } from '@/hooks/useBtcPrice';
 import { useToast } from '@/hooks/use-toast';
 import { RepayCalculator } from './RepayCalculator';
-import { Units } from '@satsterminal-sdk/borrow';
+import { Units } from '@/lib/units';
 import { Loader2, Bitcoin, AlertTriangle } from 'lucide-react';
 
 interface RepayWithCollateralProps {

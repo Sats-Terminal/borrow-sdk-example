@@ -32,7 +32,10 @@ A React application demonstrating how to use the `@satsterminal-sdk/borrow` SDK 
 3. Add your API key to `.env`:
    ```
    VITE_API_KEY=your-api-key-here
+   VITE_ZERION_API_KEY=your-zerion-api-key-here
    ```
+
+`VITE_ZERION_API_KEY` is optional. When present, the loan repay dialog uses Zerion wallet positions for balance checks and falls back to SDK positions if Zerion is unavailable.
 
 ## Running
 

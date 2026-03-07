@@ -11,10 +11,10 @@ import {
 import {
   BorrowSDK,
   ChainType,
-  Units,
   ResponseNormalizer,
 } from "@satsterminal-sdk/borrow";
 import type * as BorrowSDKModule from "@satsterminal-sdk/borrow";
+import { Units } from "@/lib/units";
 
 // Map API status to user-friendly status
 // Note: "COMPLETED" from backend means borrow workflow completed (loan disbursed), not loan repaid
@@ -101,6 +101,7 @@ type ActiveSession = BorrowSDKModule.ActiveSession;
 type UserTransaction = BorrowSDKModule.UserTransaction;
 type RepayTransaction = BorrowSDKModule.RepayTransaction;
 type SDKWorkflowStatus = BorrowSDKModule.WorkflowStatus;
+type WalletPositionsResponse = BorrowSDKModule.WalletPositionsResponse;
 import {
   getAddress,
   signMessage,
@@ -110,6 +111,16 @@ import {
 } from "sats-connect";
 
 const API_KEY = import.meta.env.VITE_API_KEY || "";
+
+const normalizeChainType = (
+  chain: string | ChainType | null | undefined,
+): ChainType =>
+  String(chain ?? ChainType.BASE)
+    .trim()
+    .toUpperCase()
+    .replace(/[\s-]+/g, "_") === ChainType.ARBITRUM
+    ? ChainType.ARBITRUM
+    : ChainType.BASE;
 
 // Workflow status type
 interface WorkflowStatus {
@@ -169,6 +180,9 @@ interface BorrowSDKContextType {
   userStatus: UserStatus | null;
   session: ActiveSession | null;
   baseAddress: string | null;
+  getBaseAddressForChain: (
+    chain?: string | ChainType,
+  ) => Promise<string | null>;
 
   // Protocol filter
   protocolFilter: ProtocolFilter;
@@ -183,6 +197,9 @@ interface BorrowSDKContextType {
   // Wallet data
   walletPortfolio: any;
   walletPositions: any;
+  getWalletPositionsForChain: (
+    chain?: string | ChainType,
+  ) => Promise<WalletPositionsResponse | null>;
 
   // Workflow
   workflowStatus: WorkflowStatus | null;
@@ -229,6 +246,7 @@ interface BorrowSDKContextType {
     loanId: string,
     amount: string,
     address: string,
+    chain?: any,
   ) => Promise<string>;
   withdrawToEVM: (
     chain: any,
@@ -303,59 +321,114 @@ export function BorrowSDKProvider({ children }: { children: ReactNode }) {
     repaying ||
     portfolioLoading;
 
+  const walletProvider = useMemo(() => {
+    if (!btcAddress || !walletType) return null;
+
+    return {
+      address: btcAddress,
+      publicKey: publicKey || undefined,
+      signMessage: async (msg: string) => {
+        if (walletType === "unisat") {
+          if (!window.unisat) throw new Error("UniSat not available");
+          return window.unisat.signMessage(msg, "ecdsa");
+        } else if (walletType === "xverse") {
+          return new Promise<string>((resolve, reject) => {
+            signMessage({
+              payload: {
+                address: btcAddress!,
+                message: msg,
+                network: { type: BitcoinNetworkType.Mainnet },
+              },
+              onFinish: (signature) => resolve(signature),
+              onCancel: () => reject(new Error("User cancelled")),
+            });
+          });
+        }
+        throw new Error("Wallet not available");
+      },
+      sendBitcoin: async (toAddress: string, satoshis: number) => {
+        if (walletType === "unisat") {
+          if (!window.unisat) throw new Error("UniSat not available");
+          return window.unisat.sendBitcoin(toAddress, satoshis);
+        } else if (walletType === "xverse") {
+          return new Promise<string>((resolve, reject) => {
+            sendBtcTransaction({
+              payload: {
+                recipients: [
+                  { address: toAddress, amountSats: BigInt(satoshis) },
+                ],
+                senderAddress: btcAddress!,
+                network: { type: BitcoinNetworkType.Mainnet },
+              },
+              onFinish: (response) => resolve(response),
+              onCancel: () => reject(new Error("User cancelled")),
+            });
+          });
+        }
+        throw new Error("Wallet not available");
+      },
+    };
+  }, [btcAddress, publicKey, walletType]);
+
   // Create SDK instance
   const sdk = useMemo(() => {
-    if (!btcAddress || !walletType) return null;
+    if (!walletProvider) return null;
 
     return new BorrowSDK({
       apiKey: API_KEY,
       chain: ChainType.BASE,
-      wallet: {
-        address: btcAddress,
-        publicKey: publicKey || undefined,
-        signMessage: async (msg: string) => {
-          if (walletType === "unisat") {
-            if (!window.unisat) throw new Error("UniSat not available");
-            return window.unisat.signMessage(msg, "ecdsa");
-          } else if (walletType === "xverse") {
-            return new Promise<string>((resolve, reject) => {
-              signMessage({
-                payload: {
-                  address: btcAddress!,
-                  message: msg,
-                  network: { type: BitcoinNetworkType.Mainnet },
-                },
-                onFinish: (signature) => resolve(signature),
-                onCancel: () => reject(new Error("User cancelled")),
-              });
-            });
-          }
-          throw new Error("Wallet not available");
-        },
-        sendBitcoin: async (toAddress: string, satoshis: number) => {
-          if (walletType === "unisat") {
-            if (!window.unisat) throw new Error("UniSat not available");
-            return window.unisat.sendBitcoin(toAddress, satoshis);
-          } else if (walletType === "xverse") {
-            return new Promise<string>((resolve, reject) => {
-              sendBtcTransaction({
-                payload: {
-                  recipients: [
-                    { address: toAddress, amountSats: BigInt(satoshis) },
-                  ],
-                  senderAddress: btcAddress!,
-                  network: { type: BitcoinNetworkType.Mainnet },
-                },
-                onFinish: (response) => resolve(response),
-                onCancel: () => reject(new Error("User cancelled")),
-              });
-            });
-          }
-          throw new Error("Wallet not available");
-        },
-      },
+      wallet: walletProvider,
     });
-  }, [btcAddress, publicKey, walletType]);
+  }, [walletProvider]);
+
+  const createSdkForChain = useCallback(
+    (chain?: string | ChainType | null) => {
+      if (!walletProvider) return null;
+
+      return new BorrowSDK({
+        apiKey: API_KEY,
+        chain: normalizeChainType(chain),
+        wallet: walletProvider,
+      });
+    },
+    [walletProvider],
+  );
+
+  const ensureBaseWalletAddressForChain = useCallback(
+    async (chain?: string | ChainType | null) => {
+      const chainType = normalizeChainType(chain);
+      const chainSdk =
+        chainType === ChainType.BASE ? sdk : createSdkForChain(chainType);
+
+      if (!chainSdk) return null;
+
+      const existingBaseWallet = await chainSdk.ensureBaseWallet();
+      if (existingBaseWallet) {
+        if (chainType === ChainType.BASE) {
+          setBaseAddress(existingBaseWallet);
+        }
+        return existingBaseWallet;
+      }
+
+      try {
+        const restored = await chainSdk.restoreSession();
+        if (restored && chainSdk.baseWalletAddress) {
+          if (chainType === ChainType.BASE) {
+            setBaseAddress(chainSdk.baseWalletAddress);
+          }
+          return chainSdk.baseWalletAddress;
+        }
+      } catch (err) {
+        console.warn(
+          `[ensureBaseWalletAddressForChain] Failed to restore ${chainType} session:`,
+          err,
+        );
+      }
+
+      return null;
+    },
+    [sdk, createSdkForChain],
+  );
 
   // Connect wallet
   const connect = useCallback(async (type: WalletType = "unisat") => {
@@ -492,6 +565,12 @@ export function BorrowSDKProvider({ children }: { children: ReactNode }) {
 
     return null;
   }, [sdk]);
+
+  const getBaseAddressForChain = useCallback(
+    async (chain?: string | ChainType) =>
+      ensureBaseWalletAddressForChain(chain),
+    [ensureBaseWalletAddressForChain],
+  );
 
   // Restore existing session (no new signature required if session is valid)
   const restoreSession = useCallback(async () => {
@@ -810,19 +889,35 @@ export function BorrowSDKProvider({ children }: { children: ReactNode }) {
       setRepaying(true);
       setError(null);
       try {
-        // Use ensureBaseWalletWithSignature() which only sets up base wallet
-        // Unlike setup(), this does NOT create a new loan wallet
-        console.log("[repay] Ensuring base wallet with signature...");
-        const { address: baseWallet, signature: baseWalletSignature } =
-          await sdk.ensureBaseWalletWithSignature();
-        setBaseAddress(baseWallet);
+        const sourceChain = normalizeChainType(options?.chain);
+        const chainSdk =
+          sourceChain === ChainType.BASE
+            ? sdk
+            : createSdkForChain(sourceChain);
 
-        console.log("[repay] Using base wallet for repayment:", {
-          address: baseWallet,
-          hasSignature: !!baseWalletSignature,
+        if (!chainSdk) {
+          throw new Error("SDK not initialized");
+        }
+
+        console.log(
+          `[repay] Ensuring ${sourceChain} base wallet with signature...`,
+        );
+        const {
+          address: sourceWallet,
+          signature: sourceWalletSignature,
+        } = await chainSdk.ensureBaseWalletWithSignature();
+
+        if (sourceChain === ChainType.BASE) {
+          setBaseAddress(sourceWallet);
+        }
+
+        console.log("[repay] Using source wallet for repayment:", {
+          chain: sourceChain,
+          address: sourceWallet,
+          hasSignature: !!sourceWalletSignature,
         });
 
-        if (!baseWalletSignature) {
+        if (!sourceWalletSignature) {
           throw new Error(
             "Failed to obtain wallet signature. Please try again.",
           );
@@ -838,15 +933,17 @@ export function BorrowSDKProvider({ children }: { children: ReactNode }) {
           repayAmount,
           loanAmount,
           isPartialRepay,
-          sourceWallet: baseWallet,
+          sourceChain,
+          sourceWallet,
           options,
         });
 
-        const transactionId = await sdk.repay(originalBorrowId, repayAmount, {
+        const { chain: _sourceChain, ...repayOptions } = options ?? {};
+        const transactionId = await chainSdk.repay(originalBorrowId, repayAmount, {
           trackWorkflow: false,
-          sourceWalletAddress: baseWallet,
-          sourceWalletSignature: baseWalletSignature,
-          ...options,
+          sourceWalletAddress: sourceWallet,
+          sourceWalletSignature: sourceWalletSignature,
+          ...repayOptions,
         });
         await loadTransactions();
         return transactionId;
@@ -857,7 +954,7 @@ export function BorrowSDKProvider({ children }: { children: ReactNode }) {
         setRepaying(false);
       }
     },
-    [sdk, loadTransactions, transactions],
+    [sdk, createSdkForChain, loadTransactions, transactions],
   );
 
   // Get repay status
@@ -961,6 +1058,42 @@ export function BorrowSDKProvider({ children }: { children: ReactNode }) {
     [sdk],
   );
 
+  const getWalletPositionsForChain = useCallback(
+    async (chain?: string | ChainType): Promise<WalletPositionsResponse | null> => {
+      const chainType = normalizeChainType(chain);
+      const chainSdk =
+        chainType === ChainType.BASE ? sdk : createSdkForChain(chainType);
+
+      if (!chainSdk) return null;
+
+      setPortfolioLoading(true);
+      try {
+        const baseWallet = await ensureBaseWalletAddressForChain(chainType);
+        if (!baseWallet) {
+          if (chainType === ChainType.BASE) {
+            setWalletPositions(null);
+          }
+          return null;
+        }
+
+        const result = await chainSdk.getWalletPositions();
+        if (chainType === ChainType.BASE) {
+          setWalletPositions(result);
+        }
+        return result;
+      } catch (err) {
+        console.error(
+          `[getWalletPositionsForChain] ${chainType} error:`,
+          err,
+        );
+        return null;
+      } finally {
+        setPortfolioLoading(false);
+      }
+    },
+    [sdk, createSdkForChain, ensureBaseWalletAddressForChain],
+  );
+
   // Get wallet portfolio
   const getWalletPortfolio = useCallback(async () => {
     if (!sdk) return;
@@ -985,46 +1118,45 @@ export function BorrowSDKProvider({ children }: { children: ReactNode }) {
 
   // Get wallet positions
   const getWalletPositions = useCallback(async () => {
-    if (!sdk) return;
-    setPortfolioLoading(true);
-    try {
-      const baseWallet = await ensureBaseWalletAddress();
-      if (!baseWallet) {
-        setWalletPositions(null);
-        return;
-      }
-
-      const result = await sdk.getWalletPositions();
-      setWalletPositions(result);
-    } catch (err) {
-      console.error("[getWalletPositions] Error:", err);
-    } finally {
-      setPortfolioLoading(false);
-    }
-  }, [sdk, ensureBaseWalletAddress]);
+    await getWalletPositionsForChain(ChainType.BASE);
+  }, [getWalletPositionsForChain]);
 
   // Withdraw collateral
   const withdrawCollateral = useCallback(
-    async (loanId: string, amount: string, address: string) => {
+    async (loanId: string, amount: string, address: string, chain?: any) => {
       if (!sdk) throw new Error("SDK not initialized");
       setRepaying(true); // Use repaying state for withdraw operations
       setError(null);
       try {
-        // Use ensureBaseWalletWithSignature() which only sets up base wallet
-        // Unlike setup(), this does NOT create a new loan wallet
-        console.log(
-          "[withdrawCollateral] Ensuring base wallet with signature...",
-        );
-        const { address: baseWallet, signature: baseWalletSignature } =
-          await sdk.ensureBaseWalletWithSignature();
-        setBaseAddress(baseWallet);
+        const sourceChain = normalizeChainType(chain);
+        const chainSdk =
+          sourceChain === ChainType.BASE
+            ? sdk
+            : createSdkForChain(sourceChain);
 
-        console.log("[withdrawCollateral] Using base wallet:", {
-          address: baseWallet,
-          hasSignature: !!baseWalletSignature,
+        if (!chainSdk) {
+          throw new Error("SDK not initialized");
+        }
+
+        console.log(
+          `[withdrawCollateral] Ensuring ${sourceChain} base wallet with signature...`,
+        );
+        const {
+          address: sourceWallet,
+          signature: sourceWalletSignature,
+        } = await chainSdk.ensureBaseWalletWithSignature();
+
+        if (sourceChain === ChainType.BASE) {
+          setBaseAddress(sourceWallet);
+        }
+
+        console.log("[withdrawCollateral] Using source wallet:", {
+          chain: sourceChain,
+          address: sourceWallet,
+          hasSignature: !!sourceWalletSignature,
         });
 
-        if (!baseWalletSignature) {
+        if (!sourceWalletSignature) {
           throw new Error(
             "Failed to obtain wallet signature. Please try again.",
           );
@@ -1034,13 +1166,13 @@ export function BorrowSDKProvider({ children }: { children: ReactNode }) {
         const loan = transactions.find((t) => t.id === loanId);
         const loanIndex = loan?.borrowTransaction?.loanIndex ?? 0;
 
-        const transactionId = await sdk.withdrawCollateral(
+        const transactionId = await chainSdk.withdrawCollateral(
           loanId,
           amount,
           address,
           {
-            sourceWalletAddress: baseWallet,
-            sourceWalletSignature: baseWalletSignature,
+            sourceWalletAddress: sourceWallet,
+            sourceWalletSignature: sourceWalletSignature,
             loanIndex,
           },
         );
@@ -1054,7 +1186,7 @@ export function BorrowSDKProvider({ children }: { children: ReactNode }) {
         setRepaying(false);
       }
     },
-    [sdk, transactions, loadTransactions],
+    [sdk, createSdkForChain, transactions, loadTransactions],
   );
 
   // Withdraw to EVM (adapt signature to match SDK's object-based params)
@@ -1062,13 +1194,29 @@ export function BorrowSDKProvider({ children }: { children: ReactNode }) {
     async (chain: any, amount: string, destinationAddress: string) => {
       if (!sdk) throw new Error("SDK not initialized");
 
-      // Ensure base wallet is set up before withdrawal (same pattern as repay/withdrawCollateral)
-      const { address: baseWallet } = await sdk.ensureBaseWalletWithSignature();
-      setBaseAddress(baseWallet);
+      const sourceChain = normalizeChainType(chain);
+      const chainSdk =
+        sourceChain === ChainType.BASE
+          ? sdk
+          : createSdkForChain(sourceChain);
 
-      return sdk.withdrawToEVM({ chain, amount, destinationAddress });
+      if (!chainSdk) {
+        throw new Error("SDK not initialized");
+      }
+
+      const { address: sourceWallet } =
+        await chainSdk.ensureBaseWalletWithSignature();
+      if (sourceChain === ChainType.BASE) {
+        setBaseAddress(sourceWallet);
+      }
+
+      return chainSdk.withdrawToEVM({
+        chain: sourceChain,
+        amount,
+        destinationAddress,
+      });
     },
-    [sdk],
+    [sdk, createSdkForChain],
   );
 
   // Withdraw to Bitcoin (adapt signature to match SDK's object-based params)
@@ -1081,13 +1229,30 @@ export function BorrowSDKProvider({ children }: { children: ReactNode }) {
     ) => {
       if (!sdk) throw new Error("SDK not initialized");
 
-      // Ensure base wallet is set up before withdrawal (same pattern as repay/withdrawCollateral)
-      const { address: baseWallet } = await sdk.ensureBaseWalletWithSignature();
-      setBaseAddress(baseWallet);
+      const sourceChain = normalizeChainType(chain);
+      const chainSdk =
+        sourceChain === ChainType.BASE
+          ? sdk
+          : createSdkForChain(sourceChain);
 
-      return sdk.withdrawToBitcoin({ chain, amount, assetSymbol, btcAddress });
+      if (!chainSdk) {
+        throw new Error("SDK not initialized");
+      }
+
+      const { address: sourceWallet } =
+        await chainSdk.ensureBaseWalletWithSignature();
+      if (sourceChain === ChainType.BASE) {
+        setBaseAddress(sourceWallet);
+      }
+
+      return chainSdk.withdrawToBitcoin({
+        chain: sourceChain,
+        amount,
+        assetSymbol,
+        btcAddress,
+      });
     },
-    [sdk],
+    [sdk, createSdkForChain],
   );
 
   // Get withdraw status
@@ -1111,6 +1276,7 @@ export function BorrowSDKProvider({ children }: { children: ReactNode }) {
     userStatus,
     session,
     baseAddress,
+    getBaseAddressForChain,
 
     // Protocol filter
     protocolFilter,
@@ -1158,6 +1324,7 @@ export function BorrowSDKProvider({ children }: { children: ReactNode }) {
     // Wallet methods
     getWalletPortfolio,
     getWalletPositions,
+    getWalletPositionsForChain,
     // Withdraw methods
     withdrawCollateral,
     withdrawToEVM,

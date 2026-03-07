@@ -1,21 +1,29 @@
-import { useEffect, useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { useBorrowSDK } from '@/hooks/useBorrowSDK';
-import { LoanDetailsDialog } from './LoanDetailsDialog';
-import type { UserTransaction } from '@satsterminal-sdk/borrow';
-import { Units } from '@satsterminal-sdk/borrow';
+import { useEffect, useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { useBorrowSDK } from "@/hooks/useBorrowSDK";
+import { LoanDetailsDialog } from "./LoanDetailsDialog";
+import type { UserTransaction } from "@satsterminal-sdk/borrow";
+import { Units } from "@/lib/units";
 import {
-  RefreshCw, Loader2, ChevronRight,
-  Bitcoin, Clock, CheckCircle2, AlertCircle
-} from 'lucide-react';
+  RefreshCw,
+  Loader2,
+  ChevronRight,
+  Bitcoin,
+  Clock,
+  CheckCircle2,
+  AlertCircle,
+} from "lucide-react";
 
 export function LoanHistory() {
-  const { isConnected, transactions, loadTransactions, transactionsLoading } = useBorrowSDK();
-  const [selectedLoan, setSelectedLoan] = useState<UserTransaction | null>(null);
+  const { isConnected, transactions, loadTransactions, transactionsLoading } =
+    useBorrowSDK();
+  const [selectedLoan, setSelectedLoan] = useState<UserTransaction | null>(
+    null,
+  );
   const [dialogOpen, setDialogOpen] = useState(false);
   const [hasLoaded, setHasLoaded] = useState(false);
-
+  console.log(transactions);
   useEffect(() => {
     if (isConnected) {
       loadTransactions().finally(() => setHasLoaded(true));
@@ -33,40 +41,40 @@ export function LoanHistory() {
   };
 
   const getStatusBadge = (status: string) => {
-    const s = status?.toLowerCase() || '';
+    const s = status?.toLowerCase() || "";
     switch (s) {
-      case 'active':
+      case "active":
         return (
           <Badge variant="success" className="gap-1">
             <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
             Active
           </Badge>
         );
-      case 'completed':
-      case 'repaid':
-      case 'closed':
+      case "completed":
+      case "repaid":
+      case "closed":
         return (
           <Badge variant="secondary" className="gap-1">
             <CheckCircle2 className="h-3 w-3" />
             Repaid
           </Badge>
         );
-      case 'pending':
-      case 'awaiting_deposit':
+      case "pending":
+      case "awaiting_deposit":
         return (
           <Badge variant="warning" className="gap-1">
             <Clock className="h-3 w-3" />
             Pending
           </Badge>
         );
-      case 'processing':
+      case "processing":
         return (
           <Badge variant="outline" className="gap-1">
             <Loader2 className="h-3 w-3 animate-spin" />
             Processing
           </Badge>
         );
-      case 'failed':
+      case "failed":
         return (
           <Badge variant="destructive" className="gap-1">
             <AlertCircle className="h-3 w-3" />
@@ -74,20 +82,20 @@ export function LoanHistory() {
           </Badge>
         );
       default:
-        return <Badge variant="outline">{status || 'Unknown'}</Badge>;
+        return <Badge variant="outline">{status || "Unknown"}</Badge>;
     }
   };
 
   const isClickable = (status: string) => {
-    const s = status?.toLowerCase() || '';
-    return s === 'active' || s === 'completed' || s === 'repaid';
+    const s = status?.toLowerCase() || "";
+    return s === "active" || s === "completed" || s === "repaid";
   };
 
   const formatDate = (timestamp: number) => {
-    return new Date(timestamp).toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
+    return new Date(timestamp).toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
     });
   };
 
@@ -117,7 +125,9 @@ export function LoanHistory() {
           <div>
             <h2 className="font-semibold">My Loans</h2>
             <p className="text-sm text-muted-foreground">
-              {hasLoaded ? `${transactions.length} transaction${transactions.length !== 1 ? 's' : ''}` : 'Loading...'}
+              {hasLoaded
+                ? `${transactions.length} transaction${transactions.length !== 1 ? "s" : ""}`
+                : "Loading..."}
             </p>
           </div>
           <Button
@@ -162,17 +172,20 @@ export function LoanHistory() {
           {hasLoaded && transactions.length > 0 && (
             <div className="divide-y divide-border">
               {transactions.map((tx) => {
-                const collateralAmount = tx.borrowTransaction?.collateralAmount || '0';
-                const collateralBtc = parseFloat(Units.normalizeToBtc(collateralAmount));
-                const protocol = tx.borrowTransaction?.protocol || 'AAVE';
-                const chain = tx.borrowTransaction?.chain || 'Base';
+                const collateralAmount =
+                  tx.borrowTransaction?.collateralAmount || "0";
+                const collateralBtc = parseFloat(
+                  Units.normalizeToBtc(collateralAmount),
+                );
+                const protocol = tx.borrowTransaction?.protocol || "AAVE";
+                const chain = tx.borrowTransaction?.chain || "Base";
                 const clickable = isClickable(tx.status);
 
                 return (
                   <div
                     key={tx.id}
                     className={`flex items-center justify-between px-4 py-3 transition-colors ${
-                      clickable ? 'cursor-pointer hover:bg-zinc-50' : ''
+                      clickable ? "cursor-pointer hover:bg-zinc-50" : ""
                     }`}
                     onClick={() => clickable && handleLoanClick(tx)}
                   >
