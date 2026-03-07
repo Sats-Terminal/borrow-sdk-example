@@ -702,15 +702,14 @@ export function BorrowSDKProvider({ children }: { children: ReactNode }) {
       setQuotesLoading(true);
       setError(null);
       try {
-        const collateralSatoshis = Units.btcToSats(collateral).toString();
         console.log("[fetchQuotes] Requesting quotes with:", {
-          collateralSatoshis,
+          collateralAmountBtc: collateral,
           loanAmount,
           ltv,
         });
 
         const quotesData = await sdk.getQuotes({
-          collateralAmount: collateralSatoshis,
+          collateralAmount: collateral,
           loanAmount,
           ltv,
         });
