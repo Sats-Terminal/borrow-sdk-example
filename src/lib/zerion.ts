@@ -48,19 +48,30 @@ export async function fetchZerionPositions(
     throw new Error("Missing VITE_ZERION_API_KEY");
   }
 
-  const url = new URL(`https://api.zerion.io/v1/wallets/${address}/positions`);
+  const url = new URL(`https://api.zerion.io/v1/wallets/${address}/positions/`);
   url.searchParams.set("filter[positions]", "only_simple");
   url.searchParams.set("filter[trash]", "only_non_trash");
 
   const response = await fetch(url.toString(), {
     headers: {
+      Accept: "application/json",
       Authorization: `Basic ${btoa(`${ZERION_API_KEY}:`)}`,
     },
+    redirect: "follow",
   });
+
+  const contentType = response.headers.get("content-type") || "";
 
   if (!response.ok) {
     const errorText = await response.text();
     throw new Error(errorText || `Zerion request failed with ${response.status}`);
+  }
+
+  if (!contentType.includes("application/json")) {
+    const errorText = await response.text();
+    throw new Error(
+      errorText || "Zerion returned a non-JSON response for positions",
+    );
   }
 
   return response.json() as Promise<ZerionPositionsResponse>;
