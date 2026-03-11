@@ -101,9 +101,9 @@ export function LoanDetailsDialog({
       setRepaySourceLoading(true);
       try {
         const address = await getBaseAddressForChain(loanChain);
-        let positions = null;
+        let positions: any = await getWalletPositionsForChain(loanChain);
 
-        if (address && hasZerionApiKey()) {
+        if (!positions && address && hasZerionApiKey()) {
           try {
             positions = await fetchZerionPositions(address);
           } catch (err) {
@@ -112,10 +112,6 @@ export function LoanDetailsDialog({
               err,
             );
           }
-        }
-
-        if (!positions) {
-          positions = await getWalletPositionsForChain(loanChain);
         }
 
         setRepaySourceAddress(address || "");
@@ -173,6 +169,25 @@ export function LoanDetailsDialog({
 
   if (!loan) return null;
 
+  const formatPreciseAmount = (value: string | number | undefined) => {
+    const rawValue = String(value ?? "0").trim();
+    if (!rawValue) return "0";
+
+    const normalizedValue = rawValue.replace(/,/g, "");
+    const [integerPart = "0", fractionalPart] = normalizedValue.split(".");
+    const integerNumber = Number(integerPart || "0");
+
+    if (!Number.isFinite(integerNumber)) {
+      return rawValue;
+    }
+
+    const formattedInteger = integerNumber.toLocaleString(undefined, {
+      maximumFractionDigits: 0,
+    });
+
+    return fractionalPart ? `${formattedInteger}.${fractionalPart}` : formattedInteger;
+  };
+
   // Parse loan details
   const loanAmount = parseFloat(loan.amount) || 0;
   const protocol = loan.borrowTransaction?.protocol || "AAVE";
@@ -184,6 +199,12 @@ export function LoanDetailsDialog({
     .map((part: string) => part.charAt(0).toUpperCase() + part.slice(1))
     .join(" ");
   const repayWalletAddress = repaySourceAddress || "";
+  const explorerHost =
+    chain === "ARBITRUM"
+      ? "arbiscan.io"
+      : chain === "ETHEREUM"
+        ? "etherscan.io"
+        : "basescan.org";
 
   // Parse collateral info - use SDK's Units utility for type-safe conversion
   const parseCollateralValue = (value: string | undefined): number => {
@@ -202,12 +223,15 @@ export function LoanDetailsDialog({
   const remainingDebt = collateralInfo
     ? parseFloat(collateralInfo.remainingDebt)
     : loanAmount;
+  const remainingDebtDisplay = formatPreciseAmount(
+    collateralInfo?.remainingDebt ?? loan.amount,
+  );
   const repayAssetPosition = getChainAssetPosition(
     repaySourcePositions,
     repaymentAsset,
     chain,
+    { allowCrossChainFallback: false },
   );
-  console.log(repayAssetPosition, "repay asset position");
   const repayAssetBalance = repayAssetPosition?.attributes.quantity.float || 0;
   const walletPositionsLoaded =
     !repaySourceLoading && repaySourcePositions !== null;
@@ -235,7 +259,7 @@ export function LoanDetailsDialog({
 
   const isFullRepayment = parseFloat(repayAmount) >= remainingDebt;
 
-  // Handle repay - always from base wallet
+  // Handle repay from the loan-chain smart account
   const handleRepay = async () => {
     try {
       const repayAmountNum = parseFloat(repayAmount);
@@ -320,7 +344,7 @@ export function LoanDetailsDialog({
     }
   };
 
-  // Handle withdraw USDC - from base wallet
+  // Handle withdraw USDC from the loan-chain repay wallet
   const handleWithdrawUsdc = async () => {
     if (!withdrawUsdcAmount || !withdrawUsdcAddress) {
       toast({
@@ -453,7 +477,7 @@ export function LoanDetailsDialog({
             ) : (
               <>
                 <p className="font-semibold font-mono">
-                  ${remainingDebt.toLocaleString()}
+                  ${remainingDebtDisplay}
                 </p>
                 <p className="text-xs text-muted-foreground">USDC</p>
               </>
@@ -481,7 +505,7 @@ export function LoanDetailsDialog({
               )}
             </Button>
             <a
-              href={`https://${chain === "ARBITRUM" ? "arbiscan.io" : "basescan.org"}/address/${repayWalletAddress}`}
+              href={`https://${explorerHost}/address/${repayWalletAddress}`}
               target="_blank"
               rel="noopener noreferrer"
               className="ml-auto"
@@ -516,7 +540,7 @@ export function LoanDetailsDialog({
               <div className="p-3 bg-zinc-50 rounded-xl border-[0.5px]">
                 <p className="text-sm text-muted-foreground">Remaining Debt</p>
                 <p className="text-xl font-semibold font-mono">
-                  ${remainingDebt.toLocaleString()} {repaymentAsset}
+                  ${remainingDebtDisplay} {repaymentAsset}
                 </p>
               </div>
 

@@ -3,11 +3,24 @@ import type { WalletPosition, WalletPositionsResponse } from '@satsterminal-sdk/
 type WalletPositionsLike = WalletPosition[] | WalletPositionsResponse | null | undefined;
 
 const CHAIN_ALIASES: Record<string, string> = {
+  '1': 'ethereum',
+  '10': 'optimism',
+  '56': 'bnb_smart_chain',
+  '137': 'polygon',
   '42161': 'arbitrum',
   '8453': 'base',
   'arb': 'arbitrum',
+  'eth': 'ethereum',
+  'mainnet': 'ethereum',
   'arbitrum_one': 'arbitrum',
   'base_mainnet': 'base',
+  'ethereum_mainnet': 'ethereum',
+  'binance_smart_chain': 'bnb_smart_chain',
+  'bsc': 'bnb_smart_chain',
+  'eip155:1': 'ethereum',
+  'eip155:10': 'optimism',
+  'eip155:56': 'bnb_smart_chain',
+  'eip155:137': 'polygon',
   'eip155:42161': 'arbitrum',
   'eip155:8453': 'base',
 };
@@ -29,9 +42,13 @@ export function getChainAssetPosition(
   positions: WalletPositionsLike,
   assetSymbol: string,
   chainId: string,
+  options?: {
+    allowCrossChainFallback?: boolean;
+  },
 ): WalletPosition | null {
   const normalizedAssetSymbol = assetSymbol.trim().toUpperCase();
   const normalizedChainId = normalizeChainId(chainId);
+  const allowCrossChainFallback = options?.allowCrossChainFallback ?? true;
   const matchingSymbolPositions = getWalletPositionsList(positions).filter((position) => {
     const positionSymbol = position.attributes.fungible_info?.symbol?.trim().toUpperCase();
     return positionSymbol === normalizedAssetSymbol;
@@ -48,6 +65,10 @@ export function getChainAssetPosition(
 
   if (exactChainMatch) {
     return exactChainMatch;
+  }
+
+  if (!allowCrossChainFallback) {
+    return null;
   }
 
   // Fallback: when the wallet query is already chain-specific, some providers still return

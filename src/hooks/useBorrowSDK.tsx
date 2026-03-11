@@ -112,15 +112,38 @@ import {
 
 const API_KEY = import.meta.env.VITE_API_KEY || "";
 
+const CHAIN_TYPE_LOOKUP = Object.values(ChainType).reduce(
+  (lookup, chainType) => {
+    lookup[chainType.toLowerCase().replace(/[\s-]+/g, "_")] = chainType;
+    return lookup;
+  },
+  {} as Record<string, ChainType>,
+);
+
+const CHAIN_TYPE_ALIASES: Record<string, ChainType> = {
+  arb: ChainType.ARBITRUM,
+  arbitrum_one: ChainType.ARBITRUM,
+  eth: ChainType.ETHEREUM,
+  mainnet: ChainType.ETHEREUM,
+  ethereum_mainnet: ChainType.ETHEREUM,
+  bsc: ChainType.BSC,
+  binance_smart_chain: ChainType.BSC,
+};
+
 const normalizeChainType = (
   chain: string | ChainType | null | undefined,
-): ChainType =>
-  String(chain ?? ChainType.BASE)
+): ChainType => {
+  const normalized = String(chain ?? ChainType.BASE)
     .trim()
-    .toUpperCase()
-    .replace(/[\s-]+/g, "_") === ChainType.ARBITRUM
-    ? ChainType.ARBITRUM
-    : ChainType.BASE;
+    .toLowerCase()
+    .replace(/[\s-]+/g, "_");
+
+  return (
+    CHAIN_TYPE_ALIASES[normalized] ??
+    CHAIN_TYPE_LOOKUP[normalized] ??
+    ChainType.BASE
+  );
+};
 
 // Workflow status type
 interface WorkflowStatus {
