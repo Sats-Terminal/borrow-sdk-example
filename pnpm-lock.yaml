@@ -42,8 +42,8 @@ importers:
         specifier: ^1.2.6
         version: 1.2.15(@types/react-dom@19.2.3(@types/react@19.2.8))(@types/react@19.2.8)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
       '@satsterminal-sdk/borrow':
-        specifier: ^1.6.26
-        version: 1.6.26(typescript@5.9.3)
+        specifier: ^1.6.27
+        version: 1.6.27(typescript@5.9.3)
       class-variance-authority:
         specifier: ^0.7.0
         version: 0.7.1
@@ -970,16 +970,16 @@ packages:
     cpu: [x64]
     os: [win32]
 
-  '@satsterminal-sdk/borrow@1.6.26':
-    resolution: {integrity: sha512-6fgKoQAj3NOC4AmzUVXcJTEt5MP4uzRUT36rO+w7kW526sgCz+n9XF5nCb5eS21DRnrNbfn4H6FZNBg2xn0ZGg==}
+  '@satsterminal-sdk/borrow@1.6.27':
+    resolution: {integrity: sha512-FjPqdhlMAZ9R9wb+7i7pSQcp1px44Wthq/+oyK2Duc3QQxnQrVBGDqKa2XbAEpMOt8CvvKcSn2iBlvOvpoEOgA==}
     peerDependencies:
       typescript: ^5.0.0
     peerDependenciesMeta:
       typescript:
         optional: true
 
-  '@satsterminal-sdk/core@1.6.26':
-    resolution: {integrity: sha512-Te9wNmwCkqWlpzLaUi0oAQSGOhkhyvXzg8zUzfd8BksY1QLCAT+EDc/Uo3AeAtpHKWjvxXgyERUSf1/B5JrbLQ==}
+  '@satsterminal-sdk/core@1.6.27':
+    resolution: {integrity: sha512-kteCAvaLTsvYA3hF04/pk0sRpZiGx0qYJbYsEsfdIWyAikOUS/Ctr5UNJTO2XdS/xgdaOuaDXwAmJ2gCfRzffQ==}
 
   '@scure/base@1.2.6':
     resolution: {integrity: sha512-g/nm5FgUa//MCj1gV09zTJTaM6KBAHqLN907YVQqf7zC49+DcO4B1so4ZX07Ef10Twr6nuqYEH9GEggFXA4Fmg==}
@@ -2482,16 +2482,16 @@ snapshots:
   '@rollup/rollup-win32-x64-msvc@4.55.1':
     optional: true
 
-  '@satsterminal-sdk/borrow@1.6.26(typescript@5.9.3)':
+  '@satsterminal-sdk/borrow@1.6.27(typescript@5.9.3)':
     dependencies:
-      '@satsterminal-sdk/core': 1.6.26
+      '@satsterminal-sdk/core': 1.6.27
       bignumber.js: 9.3.1
     optionalDependencies:
       typescript: 5.9.3
     transitivePeerDependencies:
       - encoding
 
-  '@satsterminal-sdk/core@1.6.26':
+  '@satsterminal-sdk/core@1.6.27':
     dependencies:
       node-fetch: 2.7.0
     transitivePeerDependencies:
