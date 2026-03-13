@@ -56,11 +56,7 @@ export function getChainAssetPosition(
 
   const exactChainMatch = matchingSymbolPositions.find((position) => {
     const positionChainId = normalizeChainId(position.relationships?.chain?.data?.id);
-    const implementationMatch = position.attributes.fungible_info?.implementations?.some(
-      (implementation) => normalizeChainId(implementation.chain_id) === normalizedChainId,
-    );
-
-    return positionChainId === normalizedChainId || implementationMatch;
+    return positionChainId === normalizedChainId;
   });
 
   if (exactChainMatch) {
@@ -71,8 +67,7 @@ export function getChainAssetPosition(
     return null;
   }
 
-  // Fallback: when the wallet query is already chain-specific, some providers still return
-  // token metadata with a chain alias that doesn't match the loan chain string exactly.
+  // Fallback to the highest-balance match when the caller explicitly allows cross-chain selection.
   return (
     matchingSymbolPositions.sort((left, right) => {
       const leftQuantity = left.attributes.quantity.float || 0;
@@ -87,9 +82,53 @@ export function getChainAssetPosition(
   );
 }
 
-export function formatTokenBalance(balance: number, maximumFractionDigits = 4): string {
-  return balance.toLocaleString(undefined, {
-    minimumFractionDigits: balance > 0 && balance < 1 ? Math.min(2, maximumFractionDigits) : 0,
+export function formatTokenBalance(
+  balance: number | string,
+  maximumFractionDigits = 4,
+): string {
+  const normalizedBalance = String(balance).trim();
+
+  if (!normalizedBalance) {
+    return "0";
+  }
+
+  const numericBalance = Number(normalizedBalance);
+  if (!Number.isFinite(numericBalance)) {
+    return normalizedBalance;
+  }
+
+  const isNegative = normalizedBalance.startsWith("-");
+  const unsignedBalance = isNegative
+    ? normalizedBalance.slice(1)
+    : normalizedBalance;
+  const [rawIntegerPart = "0", rawFractionalPart = ""] =
+    unsignedBalance.split(".");
+  const integerPart = rawIntegerPart.replace(/^0+(?=\d)/, "") || "0";
+  const formattedInteger = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+
+  if (maximumFractionDigits <= 0) {
+    return `${isNegative ? "-" : ""}${formattedInteger}`;
+  }
+
+  const truncatedFractionalPart = rawFractionalPart.slice(
+    0,
     maximumFractionDigits,
-  });
+  );
+  const minimumFractionDigits =
+    numericBalance > 0 && numericBalance < 1
+      ? Math.min(2, maximumFractionDigits)
+      : 0;
+  const trimmedFractionalPart = truncatedFractionalPart.replace(/0+$/, "");
+  const displayedFractionalPart =
+    trimmedFractionalPart.length >= minimumFractionDigits
+      ? trimmedFractionalPart
+      : truncatedFractionalPart
+          .slice(0, minimumFractionDigits)
+          .padEnd(minimumFractionDigits, "0");
+
+  if (!displayedFractionalPart) {
+    return `${isNegative ? "-" : ""}${formattedInteger}`;
+  }
+
+  return `${isNegative ? "-" : ""}${formattedInteger}.${displayedFractionalPart}`;
 }

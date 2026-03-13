@@ -16,11 +16,7 @@ import { Separator } from "@/components/ui/separator";
 import { useBorrowSDK } from "@/hooks/useBorrowSDK";
 import { useBtcPrice } from "@/hooks/useBtcPrice";
 import { useToast } from "@/hooks/use-toast";
-import { fetchZerionPositions, hasZerionApiKey } from "@/lib/zerion";
-import {
-  formatTokenBalance,
-  getChainAssetPosition,
-} from "@/lib/walletPositions";
+import { getChainAssetPosition } from "@/lib/walletPositions";
 import { Units } from "@/lib/units";
 import type { UserTransaction } from "@satsterminal-sdk/borrow";
 import {
@@ -101,18 +97,7 @@ export function LoanDetailsDialog({
       setRepaySourceLoading(true);
       try {
         const address = await getBaseAddressForChain(loanChain);
-        let positions: any = await getWalletPositionsForChain(loanChain);
-
-        if (!positions && address && hasZerionApiKey()) {
-          try {
-            positions = await fetchZerionPositions(address);
-          } catch (err) {
-            console.error(
-              "[LoanDetailsDialog] Zerion positions failed, falling back to SDK positions:",
-              err,
-            );
-          }
-        }
+        const positions = await getWalletPositionsForChain(loanChain);
 
         setRepaySourceAddress(address || "");
         setRepaySourcePositions(positions);
@@ -233,6 +218,9 @@ export function LoanDetailsDialog({
     { allowCrossChainFallback: false },
   );
   const repayAssetBalance = repayAssetPosition?.attributes.quantity.float || 0;
+  const repayAssetBalanceDisplay = formatPreciseAmount(
+    repayAssetPosition?.attributes.quantity.numeric ?? repayAssetBalance,
+  );
   const walletPositionsLoaded =
     !repaySourceLoading && repaySourcePositions !== null;
   const maxRepayAmount = walletPositionsLoaded
@@ -554,7 +542,7 @@ export function LoanDetailsDialog({
                       <Loader2 className="h-4 w-4 animate-spin mt-1" />
                     ) : (
                       <p className="text-xl font-semibold font-mono">
-                        {formatTokenBalance(repayAssetBalance)} {repaymentAsset}
+                        {repayAssetBalanceDisplay} {repaymentAsset}
                       </p>
                     )}
                     <p className="text-xs text-muted-foreground">
@@ -592,7 +580,7 @@ export function LoanDetailsDialog({
                   {hasEnoughRepayBalance
                     ? `Enough ${repaymentAsset} in the repay source wallet on ${repaymentChainLabel} to fully repay this loan.`
                     : repayAssetBalance > 0
-                      ? `You can currently repay up to ${formatTokenBalance(repayAssetBalance)} ${repaymentAsset} from the repay source wallet on ${repaymentChainLabel}.`
+                      ? `You can currently repay up to ${repayAssetBalanceDisplay} ${repaymentAsset} from the repay source wallet on ${repaymentChainLabel}.`
                       : `No ${repaymentAsset} detected in the repay source wallet on ${repaymentChainLabel} right now.`}
                 </p>
               </div>
