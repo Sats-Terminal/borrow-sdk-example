@@ -1,9 +1,6 @@
 "use client";
 
-import { BorrowUi } from "./borrow-ui";
-
-import { BorrowProvider } from "@/components/borrow-context";
-import { PlatformWalletAddress } from "@/components/platform-wallet-address";
+import { BorrowApp } from "@/components/borrow-app";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useBtcWallet } from "@/hooks/useBtcWallet";
@@ -73,27 +70,13 @@ export function BorrowPageClient() {
   }
 
   return (
-    <BorrowProvider apiKey={apiKey} wallet={walletProvider} autoStart={false}>
-      <div className="min-h-screen bg-background text-foreground">
-        <header className="border-b border-border">
-          <div className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between gap-4 px-6">
-            <div>
-              <p className="text-sm font-medium">SatsTerminal Borrow</p>
-              <p className="font-mono text-xs text-muted-foreground">
-                {walletType} {btcAddress?.slice(0, 6)}...{btcAddress?.slice(-6)}
-              </p>
-            </div>
-            <div className="flex items-center gap-2">
-              <PlatformWalletAddress />
-              <Button variant="outline" onClick={disconnect}>
-                Disconnect
-              </Button>
-            </div>
-          </div>
-        </header>
-        <BorrowUi />
-      </div>
-    </BorrowProvider>
+    <BorrowApp
+      apiKey={apiKey}
+      wallet={walletProvider}
+      accountLabel={`${walletType} ${btcAddress?.slice(0, 6)}...${btcAddress?.slice(-6)}`}
+      defaultBitcoinAddress={btcAddress ?? ""}
+      onDisconnect={disconnect}
+    />
   );
 }
 

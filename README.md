@@ -29,20 +29,14 @@ npm run registry:sync
 `registry:sync` passes the shadcn CLI's `--overwrite` flag, so review any local
 component customizations before running it.
 
-This resolves the following production registry resources and their transitive
-dependencies:
+The complete one-page flow installs all supporting components as transitive
+registry dependencies:
 
 ```bash
-npx shadcn@latest add \
-  @satsterminal/loan-composer \
-  @satsterminal/available-offers \
-  @satsterminal/borrow-flow \
-  @satsterminal/user-loans \
-  @satsterminal/loan-management \
-  @satsterminal/wallet-withdrawal
+npx shadcn@latest add @satsterminal/borrow-app
 ```
 
-You can install a single block directly as well:
+Individual atomic blocks remain available when a custom composition is needed:
 
 ```bash
 npx shadcn@latest add @satsterminal/wallet-withdrawal

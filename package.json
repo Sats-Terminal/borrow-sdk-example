@@ -7,8 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "registry:install": "npx shadcn@latest add --yes @satsterminal/loan-composer @satsterminal/available-offers @satsterminal/borrow-flow @satsterminal/user-loans @satsterminal/loan-management @satsterminal/wallet-withdrawal",
-    "registry:sync": "npx shadcn@latest add --yes --overwrite @satsterminal/loan-composer @satsterminal/available-offers @satsterminal/borrow-flow @satsterminal/user-loans @satsterminal/loan-management @satsterminal/wallet-withdrawal"
+    "registry:install": "npx shadcn@latest add --yes @satsterminal/borrow-app",
+    "registry:sync": "npx shadcn@latest add --yes --overwrite @satsterminal/borrow-app"
   },
   "dependencies": {
     "@radix-ui/react-slider": "^1.4.0",
