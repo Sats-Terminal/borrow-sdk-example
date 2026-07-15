@@ -1,36 +1,68 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# SatsTerminal UI registry example
 
-## Getting Started
+This Next.js application demonstrates the production SatsTerminal Borrow UI
+registry. Its components are sourced from:
 
-First, run the development server:
-
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+```text
+https://ui.satsterminal.com/r/{name}.json
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+The `@satsterminal` namespace is configured in `components.json`. There are no
+localhost or local-filesystem registry sources in this project.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Install the registry blocks
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+In a clean checkout or project, install every top-level block used by this
+example with:
 
-## Learn More
+```bash
+npm run registry:install
+```
 
-To learn more about Next.js, take a look at the following resources:
+To deliberately replace the checked-in component files with the current
+production versions, run:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+npm run registry:sync
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+`registry:sync` passes the shadcn CLI's `--overwrite` flag, so review any local
+component customizations before running it.
 
-## Deploy on Vercel
+This resolves the following production registry resources and their transitive
+dependencies:
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```bash
+npx shadcn@latest add \
+  @satsterminal/loan-composer \
+  @satsterminal/available-offers \
+  @satsterminal/borrow-flow \
+  @satsterminal/user-loans \
+  @satsterminal/loan-management \
+  @satsterminal/wallet-withdrawal
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+You can install a single block directly as well:
+
+```bash
+npx shadcn@latest add @satsterminal/wallet-withdrawal
+```
+
+## Run the example
+
+Create `.env.local` with your SDK API key:
+
+```bash
+NEXT_PUBLIC_SATSTERMINAL_API_KEY=your_api_key
+```
+
+Then install dependencies and start the application:
+
+```bash
+npm install
+npm run dev
+```
+
+Open [http://localhost:3000](http://localhost:3000). This localhost address is
+only the example application's development server; registry resources still
+come from `https://ui.satsterminal.com`.
