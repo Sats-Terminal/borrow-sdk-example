@@ -8,6 +8,7 @@ import { AvailableOffers } from "@/components/available-offers";
 import { useBorrowContext } from "@/components/borrow-context";
 import { LoanComposer } from "@/components/loan-composer";
 import { UserLoans } from "@/components/user-loans";
+import { WalletWithdrawal } from "@/components/wallet-withdrawal";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -39,6 +40,7 @@ export function BorrowUi() {
           }}
           onTrackLoan={(loan) => router.push(`/borrow/transaction/${encodeURIComponent(loan.workflowId ?? loan.originalBorrowId)}?loanId=${encodeURIComponent(loan.originalBorrowId)}`)}
         />
+        <WalletWithdrawal className="lg:col-span-2" />
         </main>
       </BorrowSessionGate>
     </>

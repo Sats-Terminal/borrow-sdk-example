@@ -6,11 +6,13 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "registry:install": "npx shadcn@latest add --yes @satsterminal/loan-composer @satsterminal/available-offers @satsterminal/borrow-flow @satsterminal/user-loans @satsterminal/loan-management @satsterminal/wallet-withdrawal",
+    "registry:sync": "npx shadcn@latest add --yes --overwrite @satsterminal/loan-composer @satsterminal/available-offers @satsterminal/borrow-flow @satsterminal/user-loans @satsterminal/loan-management @satsterminal/wallet-withdrawal"
   },
   "dependencies": {
     "@radix-ui/react-slider": "^1.4.0",
-    "@satsterminal-sdk/borrow": "^1.7.1",
+    "@satsterminal-sdk/borrow": "^1.7.2",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-react": "^1.18.0",
